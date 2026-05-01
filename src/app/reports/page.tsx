@@ -17,8 +17,10 @@ import { ProgressBar } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useApplications } from "@/providers/applications-provider";
 import { useToast } from "@/providers/toast-provider";
+import { useSession } from "@/providers/session-provider";
 import { COLLEGES, HP_DISTRICTS } from "@/lib/mock-data";
 import { categoryLabel, statusLabel, pct } from "@/lib/format";
+import { getVisibleApplications, isCollegeAdmin } from "@/lib/scoping";
 import type { ApplicationStatus, ReservationCategory } from "@/lib/types";
 
 export default function Page() {
@@ -33,28 +35,40 @@ export default function Page() {
 
 function Reports() {
   const { applications } = useApplications();
+  const { session } = useSession();
   const { push } = useToast();
   const [busy, setBusy] = useState<null | "csv" | "xlsx" | "weekly">(null);
+
+  const collegeAdmin = isCollegeAdmin(session);
+  const scopedApps = useMemo(
+    () => getVisibleApplications(session, applications),
+    [session, applications]
+  );
 
   const exportFile = (kind: "csv" | "xlsx" | "weekly") => {
     setBusy(kind);
     window.setTimeout(() => {
       setBusy(null);
+      const scopeNote = collegeAdmin && session?.collegeName
+        ? ` for ${session.collegeName}`
+        : "";
       const messages: Record<typeof kind, string> = {
-        csv: "Reports exported as CSV — download started.",
-        xlsx: "Reports exported as XLSX — download started.",
-        weekly: "Weekly DHE report pack queued — link sent to your inbox."
+        csv: `Reports exported as CSV${scopeNote} — download started.`,
+        xlsx: `Reports exported as XLSX${scopeNote} — download started.`,
+        weekly: collegeAdmin
+          ? `Weekly college report pack queued${scopeNote} — link sent to your inbox.`
+          : "Weekly DHE report pack queued — link sent to your inbox."
       };
       push(messages[kind], "success");
     }, 700);
   };
 
-  const total = applications.length;
-  const verified = applications.filter((a) => a.status === "verified").length;
-  const pending = applications.filter(
+  const total = scopedApps.length;
+  const verified = scopedApps.filter((a) => a.status === "verified").length;
+  const pending = scopedApps.filter(
     (a) => a.status === "submitted" || a.status === "under_scrutiny"
   ).length;
-  const discrepancy = applications.filter(
+  const discrepancy = scopedApps.filter(
     (a) => a.status === "discrepancy_raised"
   ).length;
 

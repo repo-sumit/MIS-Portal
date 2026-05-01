@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   FileSpreadsheet,
@@ -13,49 +14,58 @@ import {
   X,
   LogOut,
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  CalendarClock
 } from "lucide-react";
 import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/providers/toast-provider";
 import { Badge } from "@/components/ui/badge";
+import { isStateAdmin } from "@/lib/scoping";
+import type { RoleCode } from "@/lib/types";
 
 interface NavItem {
   href: string;
   label: string;
   icon: ReactNode;
   match: (path: string) => boolean;
+  roles: RoleCode[];
 }
 
 const NAV: NavItem[] = [
   {
     href: "/",
     label: "Dashboard",
-    icon: <LayoutDashboard className="h-4 w-4" aria-hidden />,
-    match: (p) => p === "/"
-  },
-  {
-    href: "/applications",
-    label: "Applications",
-    icon: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
-    match: (p) => p.startsWith("/applications")
+    icon: <LayoutDashboard className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p === "/",
+    roles: ["state_admin"]
   },
   {
     href: "/college",
     label: "College Operations",
-    icon: <Building2 className="h-4 w-4" aria-hidden />,
-    match: (p) => p === "/college"
+    icon: <Building2 className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p === "/college",
+    roles: ["college_admin"]
+  },
+  {
+    href: "/applications",
+    label: "Applications",
+    icon: <FileSpreadsheet className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p.startsWith("/applications"),
+    roles: ["state_admin", "college_admin"]
   },
   {
     href: "/college/seats",
     label: "Seat Matrix",
-    icon: <Grid3x3 className="h-4 w-4" aria-hidden />,
-    match: (p) => p.startsWith("/college/seats")
+    icon: <Grid3x3 className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p.startsWith("/college/seats"),
+    roles: ["college_admin"]
   },
   {
     href: "/reports",
     label: "Reports",
-    icon: <BarChart3 className="h-4 w-4" aria-hidden />,
-    match: (p) => p.startsWith("/reports")
+    icon: <BarChart3 className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p.startsWith("/reports"),
+    roles: ["state_admin", "college_admin"]
   }
 ];
 
@@ -73,6 +83,11 @@ export function PortalFrame({ children }: { children: ReactNode }) {
     minute: "2-digit"
   });
 
+  const visibleNav = useMemo(() => {
+    if (!session) return [];
+    return NAV.filter((n) => n.roles.includes(session.role));
+  }, [session]);
+
   const handleSignOut = () => {
     signOut();
     push("You have been signed out securely.", "info");
@@ -80,12 +95,12 @@ export function PortalFrame({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-subtle">
+    <div className="flex min-h-screen flex-col bg-[#F4F6FA]">
       {/* Tricolor strip */}
       <div className="tricolor-strip h-1 w-full" aria-hidden />
 
       {/* Identity bar */}
-      <div className="bg-white border-b border-line-subtle">
+      <div className="border-b border-line-subtle bg-white">
         <div className="mx-auto flex max-w-shell items-center justify-between gap-3 px-4 py-2 text-xs text-ink-muted">
           <p className="hidden sm:block">
             Government of Himachal Pradesh · Directorate of Higher Education
@@ -107,13 +122,15 @@ export function PortalFrame({ children }: { children: ReactNode }) {
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-3 min-w-0">
-            <span
-              aria-hidden
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary-600 text-white font-bold"
-            >
-              HP
-            </span>
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <Image
+              src="/assets/HPU_Logo.png"
+              alt="Himachal Pradesh University emblem"
+              width={40}
+              height={40}
+              priority
+              className="h-9 w-9 flex-shrink-0 rounded-md object-contain"
+            />
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold leading-tight text-ink">
                 HP Higher Education MIS
@@ -131,6 +148,7 @@ export function PortalFrame({ children }: { children: ReactNode }) {
                 onSignOut={handleSignOut}
                 role={session.role}
                 name={session.name}
+                collegeName={session.collegeName}
               />
             ) : (
               <Link
@@ -145,27 +163,26 @@ export function PortalFrame({ children }: { children: ReactNode }) {
       </header>
 
       {/* Body: sidebar + main */}
-      <div className="mx-auto flex w-full max-w-shell flex-1 px-4 py-6 gap-6">
+      <div className="mx-auto flex w-full max-w-shell flex-1 gap-6 px-4 py-6">
         <aside className="hidden w-60 flex-shrink-0 md:block">
-          <nav className="sticky top-[112px] flex flex-col gap-1">
-            {NAV.map((item) => (
-              <SidebarLink
-                key={item.href}
-                {...item}
-                active={item.match(pathname)}
-              />
-            ))}
-            <div className="my-3 h-px bg-line-subtle" />
-            <div className="rounded-lg border border-line bg-white p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-primary-700">
-                Cycle 2026-27
-              </p>
-              <p className="mt-1 text-sm font-medium text-ink">Application open</p>
-              <p className="mt-1 text-xs text-ink-muted">
-                Closes 16 May 2026, 6:00 PM
-              </p>
-            </div>
-          </nav>
+          <SidebarPanel
+            items={visibleNav}
+            pathname={pathname}
+            roleLabel={
+              session
+                ? isStateAdmin(session)
+                  ? "State Admin workspace"
+                  : "College Admin workspace"
+                : ""
+            }
+            scopeLabel={
+              session
+                ? isStateAdmin(session)
+                  ? "Statewide oversight"
+                  : session.collegeName ?? "Assigned college"
+                : ""
+            }
+          />
         </aside>
 
         <main className="min-w-0 flex-1">{children}</main>
@@ -179,9 +196,18 @@ export function PortalFrame({ children }: { children: ReactNode }) {
             onClick={() => setMobileOpen(false)}
             aria-hidden
           />
-          <div className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white shadow-elevated">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <p className="text-sm font-semibold text-ink">Navigation</p>
+          <div className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-[#F4F6FA] shadow-elevated">
+            <div className="flex items-center justify-between border-b border-line bg-white px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Image
+                  src="/assets/HPU_Logo.png"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-contain"
+                />
+                <p className="text-sm font-semibold text-ink">Navigation</p>
+              </div>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -191,22 +217,82 @@ export function PortalFrame({ children }: { children: ReactNode }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <nav className="flex flex-col gap-1 p-3">
-              {NAV.map((item) => (
-                <SidebarLink
-                  key={item.href}
-                  {...item}
-                  active={item.match(pathname)}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              ))}
-            </nav>
+            <div className="p-3">
+              <SidebarPanel
+                items={visibleNav}
+                pathname={pathname}
+                onNavigate={() => setMobileOpen(false)}
+                roleLabel={
+                  session
+                    ? isStateAdmin(session)
+                      ? "State Admin"
+                      : "College Admin"
+                    : ""
+                }
+                scopeLabel={
+                  session
+                    ? isStateAdmin(session)
+                      ? "Statewide oversight"
+                      : session.collegeName ?? "Assigned college"
+                    : ""
+                }
+              />
+            </div>
           </div>
         </div>
       ) : null}
 
       <Footer />
     </div>
+  );
+}
+
+function SidebarPanel({
+  items,
+  pathname,
+  onNavigate,
+  roleLabel,
+  scopeLabel
+}: {
+  items: NavItem[];
+  pathname: string;
+  onNavigate?: () => void;
+  roleLabel: string;
+  scopeLabel: string;
+}) {
+  return (
+    <nav
+      aria-label="Primary"
+      className="md:sticky md:top-[112px] md:max-h-[calc(100vh-128px)] md:overflow-y-auto md:scrollbar-thin"
+    >
+      <div className="rounded-xl border border-line bg-white p-3 shadow-card">
+        {/* Workspace label */}
+        {roleLabel ? (
+          <div className="mb-2 px-2 pt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary-700">
+              {roleLabel}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-ink-muted">{scopeLabel}</p>
+          </div>
+        ) : null}
+
+        {/* Nav items */}
+        <ul className="flex flex-col gap-0.5">
+          {items.map((item) => (
+            <li key={item.href}>
+              <SidebarLink
+                {...item}
+                active={item.match(pathname)}
+                onNavigate={onNavigate}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Cycle status card */}
+      <CycleStatusCard />
+    </nav>
   );
 }
 
@@ -221,34 +307,72 @@ function SidebarLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+      className={`relative flex items-center gap-3 overflow-hidden rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
         active
-          ? "bg-primary-50 text-primary-700"
-          : "text-ink hover:bg-surface-subtle"
+          ? "bg-[#F1EDFF] text-primary-700"
+          : "text-ink-muted hover:bg-surface-subtle hover:text-ink"
       }`}
       aria-current={active ? "page" : undefined}
     >
+      {active ? (
+        <span
+          aria-hidden
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary-600"
+        />
+      ) : null}
       <span
-        className={`flex h-7 w-7 items-center justify-center rounded ${
-          active ? "bg-primary-600 text-white" : "bg-surface-subtle text-ink-muted"
+        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center ${
+          active ? "text-primary-700" : "text-ink-muted"
         }`}
       >
         {icon}
       </span>
-      {label}
+      <span className="truncate">{label}</span>
     </Link>
+  );
+}
+
+function CycleStatusCard() {
+  return (
+    <div className="mt-4 rounded-xl border border-line bg-white p-3 shadow-card">
+      <div className="flex items-start gap-2">
+        <span
+          aria-hidden
+          className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-primary-50 text-primary-700"
+        >
+          <CalendarClock className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+            Cycle 2026-27
+          </p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-ink">
+            <span
+              aria-hidden
+              className="h-2 w-2 rounded-full bg-success ring-2 ring-success/20"
+            />
+            Application open
+          </p>
+          <p className="mt-1 text-[11px] text-ink-muted">
+            Closes 16 May 2026, 6:00 PM IST
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
 function UserMenu({
   role,
   name,
+  collegeName,
   onSwitch,
   onSignOut
 }: {
-  role: "state_admin" | "college_admin";
+  role: RoleCode;
   name: string;
-  onSwitch: (r: "state_admin" | "college_admin") => void;
+  collegeName?: string;
+  onSwitch: (r: RoleCode) => void;
   onSignOut: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -274,7 +398,7 @@ function UserMenu({
         </span>
         <span className="hidden text-left sm:block">
           <span className="block text-xs font-semibold leading-tight text-ink">
-            {name.replace(/^Dr\.\s+/, "Dr. ")}
+            {name}
           </span>
           <span className="block text-[10px] leading-tight text-ink-muted">
             {role === "state_admin" ? "State Admin" : "College Admin"}
@@ -299,7 +423,7 @@ function UserMenu({
               <p className="text-xs text-ink-muted">
                 {role === "state_admin"
                   ? "Directorate of Higher Education"
-                  : "Government College Sanjauli, Shimla"}
+                  : (collegeName ?? "Assigned college")}
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <Badge tone="primary" dot>
@@ -317,8 +441,8 @@ function UserMenu({
               <button
                 type="button"
                 onClick={() => {
-                  onSwitch("state_admin");
                   setOpen(false);
+                  onSwitch("state_admin");
                 }}
                 className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-ink hover:bg-surface-subtle ${role === "state_admin" ? "font-semibold" : ""}`}
               >
@@ -330,8 +454,8 @@ function UserMenu({
               <button
                 type="button"
                 onClick={() => {
-                  onSwitch("college_admin");
                   setOpen(false);
+                  onSwitch("college_admin");
                 }}
                 className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-ink hover:bg-surface-subtle ${role === "college_admin" ? "font-semibold" : ""}`}
               >
@@ -436,3 +560,4 @@ function FooterColumn({
     </div>
   );
 }
+

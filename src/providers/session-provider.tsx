@@ -66,15 +66,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const switchRole = useCallback((role: RoleCode) => {
-    setSession((prev) => {
-      const base = role === "state_admin" ? STATE_ADMIN : COLLEGE_ADMIN;
-      const next: Session = {
-        ...base,
-        loggedInAt: prev?.loggedInAt ?? new Date().toISOString()
-      };
-      saveSession(next);
-      return next;
-    });
+    const prev = loadSession();
+    const base = role === "state_admin" ? STATE_ADMIN : COLLEGE_ADMIN;
+    const next: Session = {
+      ...base,
+      loggedInAt: prev?.loggedInAt ?? new Date().toISOString()
+    };
+    saveSession(next);
+    setSession(next);
+    if (typeof window !== "undefined") {
+      // College Admin lands on /college; State Admin lands on /.
+      const target = role === "college_admin" ? "/college" : "/";
+      window.location.assign(target);
+    }
   }, []);
 
   const value = useMemo<SessionContextValue>(

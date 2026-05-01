@@ -17,6 +17,7 @@ import { Badge, StatusPill } from "@/components/ui/badge";
 import { TextInput, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Alert } from "@/components/ui/alert";
 import { useApplications } from "@/providers/applications-provider";
 import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/providers/toast-provider";
@@ -26,6 +27,7 @@ import {
   formatDate,
   statusLabel
 } from "@/lib/format";
+import { getVisibleApplications, isCollegeAdmin } from "@/lib/scoping";
 import type { ApplicationStatus, ReservationCategory } from "@/lib/types";
 
 type StatusFilter = ApplicationStatus | "all";
@@ -63,18 +65,21 @@ function ApplicationsView() {
   const [categoryF, setCategoryF] = useState<CategoryFilter>("all");
   const [exporting, setExporting] = useState(false);
 
-  const isCollegeAdmin = session?.role === "college_admin";
+  const collegeAdmin = isCollegeAdmin(session);
+  const scopedApps = useMemo(
+    () => getVisibleApplications(session, applications),
+    [session, applications]
+  );
+
+  const missingCollegeAssignment = collegeAdmin && !session?.collegeId;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return applications
+    return scopedApps
       .filter((a) => {
-        if (isCollegeAdmin && session?.collegeId && a.collegeId !== session.collegeId) {
-          return false;
-        }
         if (statusF !== "all" && a.status !== statusF) return false;
-        if (districtF !== "all" && a.district.toLowerCase() !== districtF) return false;
-        if (collegeF !== "all" && a.collegeId !== collegeF) return false;
+        if (!collegeAdmin && districtF !== "all" && a.district.toLowerCase() !== districtF) return false;
+        if (!collegeAdmin && collegeF !== "all" && a.collegeId !== collegeF) return false;
         if (courseF !== "all" && a.courseId !== courseF) return false;
         if (categoryF !== "all" && a.category !== categoryF) return false;
         if (term) {
@@ -89,7 +94,7 @@ function ApplicationsView() {
         if (pa !== pb) return pa - pb;
         return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
       });
-  }, [applications, search, statusF, districtF, collegeF, courseF, categoryF, isCollegeAdmin, session?.collegeId]);
+  }, [scopedApps, search, statusF, districtF, collegeF, courseF, categoryF, collegeAdmin]);
 
   const counts = useMemo(() => {
     return {
@@ -114,8 +119,11 @@ function ApplicationsView() {
     setExporting(true);
     window.setTimeout(() => {
       setExporting(false);
+      const scopeNote = collegeAdmin && session?.collegeName
+        ? ` for ${session.collegeName}`
+        : "";
       push(
-        `${filtered.length} applications exported as CSV — download started.`,
+        `${filtered.length} applications exported as CSV${scopeNote} — download started.`,
         "success"
       );
     }, 600);
@@ -123,8 +131,8 @@ function ApplicationsView() {
 
   const filtersActive =
     statusF !== "all" ||
-    districtF !== "all" ||
-    collegeF !== "all" ||
+    (!collegeAdmin && districtF !== "all") ||
+    (!collegeAdmin && collegeF !== "all") ||
     courseF !== "all" ||
     categoryF !== "all" ||
     search.trim() !== "";
@@ -134,14 +142,14 @@ function ApplicationsView() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary-700">
-            Applications oversight
+            {collegeAdmin ? "Applications assigned to your college" : "Applications oversight"}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-ink">
-            {isCollegeAdmin ? "Application queue" : "Statewide applications"}
+            {collegeAdmin ? "Application queue" : "Statewide applications"}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {isCollegeAdmin
-              ? `Showing applications received at ${session?.collegeName}.`
+            {collegeAdmin
+              ? `Showing applications received at ${session?.collegeName ?? "your college"}.`
               : "Monitor and verify applications across all HPU-affiliated colleges."}
           </p>
         </div>
@@ -157,6 +165,17 @@ function ApplicationsView() {
           </Badge>
         </div>
       </header>
+
+      {missingCollegeAssignment ? (
+        <Alert
+          tone="warning"
+          title="No college assigned to your account"
+        >
+          Contact the Directorate of Higher Education to have a college mapped
+          to your College Admin profile. Until then, no applications will be
+          visible.
+        </Alert>
+      ) : null}
 
       {/* Filters */}
       <Card>
@@ -218,7 +237,7 @@ function ApplicationsView() {
             <option value="rejected">{statusLabel("rejected")}</option>
           </Select>
 
-          {!isCollegeAdmin ? (
+          {!collegeAdmin ? (
             <Select
               value={districtF}
               onChange={(e) => setDistrictF(e.target.value)}
@@ -233,7 +252,7 @@ function ApplicationsView() {
             </Select>
           ) : null}
 
-          {!isCollegeAdmin ? (
+          {!collegeAdmin ? (
             <Select
               value={collegeF}
               onChange={(e) => setCollegeF(e.target.value)}

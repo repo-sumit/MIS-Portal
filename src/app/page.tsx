@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CircleDashed,
@@ -24,7 +25,8 @@ import { useApplications } from "@/providers/applications-provider";
 import { useSession } from "@/providers/session-provider";
 import { HP_DISTRICTS, POLICY_ALERTS } from "@/lib/mock-data";
 import { pct } from "@/lib/format";
-import { useMemo } from "react";
+import { isCollegeAdmin } from "@/lib/scoping";
+import { useEffect, useMemo } from "react";
 
 export default function Page() {
   return (
@@ -38,7 +40,18 @@ export default function Page() {
 
 function Dashboard() {
   const { applications, hydrated } = useApplications();
-  const { session } = useSession();
+  const { session, hydrated: sessionHydrated } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (sessionHydrated && isCollegeAdmin(session)) {
+      router.replace("/college");
+    }
+  }, [sessionHydrated, session, router]);
+
+  if (sessionHydrated && isCollegeAdmin(session)) {
+    return null;
+  }
 
   const kpis = useMemo(() => {
     const total = applications.length;
