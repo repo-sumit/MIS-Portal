@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #F4F3F9;
+  --color-surface: #FFFFFF;
+  --color-border: #DEDBEC;
+  --color-text: #1C1D1F;
+  --color-text-muted: #5B6075;
+  --color-primary: #613AF5;
+  --color-primary-700: #4A2BC2;
+  --focus-ring: 0 0 0 3px rgba(97, 58, 245, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-noto-sans), "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "cv05", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Government identity strip pattern */
+.tricolor-strip {
+  background: linear-gradient(
+    to bottom,
+    #FF9933 0,
+    #FF9933 33%,
+    #FFFFFF 33%,
+    #FFFFFF 66%,
+    #138808 66%,
+    #138808 100%
+  );
+}
+
+/* Focus visibility */
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* Native select arrow normalisation */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235B6075'><path d='M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+}
+
+/* Subtle scrollbars on data-dense panes */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #DEDBEC;
+  border-radius: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #B5B0CC;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 240ms ease-out both; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin 0.9s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Utility: data-grid table wrapper */
+.data-table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5B6075;
+  background: #F4F3F9;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #DEDBEC;
+}
+
+.data-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #ECEAF5;
+  font-size: 14px;
+  color: #1C1D1F;
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover td {
+  background: #FAFAFC;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
