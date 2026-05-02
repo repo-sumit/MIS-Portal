@@ -1,4 +1,9 @@
-import type { ApplicationStatus, ReservationCategory } from "./types";
+import type {
+  ApplicationStatus,
+  DocumentReviewStatus,
+  DocumentStatus,
+  ReservationCategory
+} from "./types";
 
 export function statusLabel(status: ApplicationStatus): string {
   switch (status) {
@@ -92,4 +97,71 @@ export function relativeFromNow(iso: string): string {
 export function pct(numer: number, denom: number): number {
   if (denom <= 0) return 0;
   return Math.round((numer / denom) * 1000) / 10;
+}
+
+// ───────────────────── Document review status helpers ─────────────────────
+
+/** Map storage status → normalized review status. */
+export function reviewStatus(s: DocumentStatus): DocumentReviewStatus {
+  switch (s) {
+    case "verified":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "discrepancy":
+      return "concern_raised";
+    default:
+      return "pending_review";
+  }
+}
+
+/** Reverse map — used when persisting from the review modal. */
+export function reviewToStorage(s: DocumentReviewStatus): DocumentStatus {
+  switch (s) {
+    case "approved":
+      return "verified";
+    case "rejected":
+      return "rejected";
+    case "concern_raised":
+      return "discrepancy";
+    default:
+      return "pending";
+  }
+}
+
+export function reviewStatusLabel(s: DocumentReviewStatus): string {
+  switch (s) {
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "concern_raised":
+      return "Concern raised";
+    default:
+      return "Pending review";
+  }
+}
+
+export function reviewStatusTone(
+  s: DocumentReviewStatus
+): "success" | "warning" | "danger" | "info" | "neutral" {
+  switch (s) {
+    case "approved":
+      return "success";
+    case "rejected":
+      return "danger";
+    case "concern_raised":
+      return "warning";
+    default:
+      return "info";
+  }
+}
+
+/** Pretty file-type label for the review preview pane. */
+export function mimeLabel(mime?: string): string {
+  if (!mime) return "PDF / image";
+  if (mime === "application/pdf") return "PDF";
+  if (mime === "image/jpeg") return "JPEG";
+  if (mime === "image/png") return "PNG";
+  return mime.toUpperCase();
 }

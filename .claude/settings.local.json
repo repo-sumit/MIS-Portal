@@ -14,7 +14,8 @@
       "Bash(echo \"tsc exit=$?\")",
       "Bash(curl -s -o /tmp/merit.html -w \"merit: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/merit)",
       "Bash(curl -s -o /tmp/alloc.html -w \"alloc: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/allocation)",
-      "Bash(curl -s -o /tmp/login.html -w \"login: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/login)"
+      "Bash(curl -s -o /tmp/login.html -w \"login: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/login)",
+      "Bash(grep -n \"    </div>$\\\\|^  \\);$\\\\|^}$\" src/app/applications/\\\\[applicationId\\\\]/page.tsx)"
     ]
   }
 }

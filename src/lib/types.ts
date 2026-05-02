@@ -26,13 +26,35 @@ export interface College {
   principal: string;
 }
 
+/**
+ * Storage-side document status. Kept stable so existing localStorage
+ * payloads continue to deserialize cleanly. The public review surface
+ * uses the normalized aliases below (see `DocumentReviewStatus`).
+ */
+export type DocumentStatus = "pending" | "verified" | "rejected" | "discrepancy";
+
+/** Human-facing review state used by the document review modal. */
+export type DocumentReviewStatus =
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "concern_raised";
+
 export interface DocumentEntry {
   id: string;
   type: string;
   label: string;
   uploadedAt: string;
-  status: "pending" | "verified" | "rejected" | "discrepancy";
+  status: DocumentStatus;
   remarks?: string;
+  /** Optional MIME hint shown in the review preview */
+  mime?: "application/pdf" | "image/jpeg" | "image/png";
+  /** Reviewer note attached to the most recent action */
+  reviewNote?: string;
+  /** Reviewer who took the most recent action */
+  reviewedBy?: string;
+  /** ISO timestamp of the most recent review action */
+  reviewedAt?: string;
 }
 
 export interface PreferenceEntry {

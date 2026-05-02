@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   CheckCircle2,
   AlertTriangle,
   XCircle,
   FileText,
+  FileSearch,
+  Eye,
   GraduationCap,
   IdCard,
   ListOrdered,
@@ -27,15 +29,25 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Badge, StatusPill } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea, FieldShell } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { useApplications } from "@/providers/applications-provider";
 import { useToast } from "@/providers/toast-provider";
 import { useSession } from "@/providers/session-provider";
 import {
   categoryLabel,
   formatDate,
-  formatDateTime
+  formatDateTime,
+  mimeLabel,
+  reviewStatus,
+  reviewStatusLabel,
+  reviewStatusTone
 } from "@/lib/format";
-import type { Application, ApplicationStatus } from "@/lib/types";
+import type {
+  Application,
+  ApplicationStatus,
+  DocumentEntry,
+  DocumentReviewStatus
+} from "@/lib/types";
 
 type TabKey = "applicant" | "academic" | "claims" | "documents" | "preferences" | "history";
 
@@ -52,7 +64,7 @@ export default function Page() {
 function Detail() {
   const params = useParams<{ applicationId: string }>();
   const router = useRouter();
-  const { applications, setStatus } = useApplications();
+  const { applications, setStatus, setDocumentStatus } = useApplications();
   const { push } = useToast();
   const { session } = useSession();
 
@@ -63,6 +75,7 @@ function Detail() {
   const [discrepancyOpen, setDiscrepancyOpen] = useState(false);
   const [discrepancyDoc, setDiscrepancyDoc] = useState<string>("");
   const [discrepancyReason, setDiscrepancyReason] = useState("");
+  const [reviewDocId, setReviewDocId] = useState<string | null>(null);
 
   const application = useMemo(
     () => applications.find((a) => a.id === params.applicationId),
@@ -246,7 +259,12 @@ function Detail() {
               {tab === "applicant" ? <ApplicantTab a={application} /> : null}
               {tab === "academic" ? <AcademicTab a={application} /> : null}
               {tab === "claims" ? <ClaimsTab a={application} /> : null}
-              {tab === "documents" ? <DocumentsTab a={application} /> : null}
+              {tab === "documents" ? (
+                <DocumentsTab
+                  a={application}
+                  onReview={(docId) => setReviewDocId(docId)}
+                />
+              ) : null}
               {tab === "preferences" ? <PreferencesTab a={application} /> : null}
               {tab === "history" ? <HistoryTab a={application} /> : null}
             </CardBody>
@@ -413,6 +431,40 @@ function Detail() {
           </Card>
         </div>
       </div>
+
+      <DocumentReviewModal
+        application={application}
+        documentId={reviewDocId}
+        onClose={() => setReviewDocId(null)}
+        onCommit={(docId, nextStatus, note) => {
+          setDocumentStatus(application.id, docId, nextStatus, {
+            actor: session?.name ?? "DHE Officer",
+            note
+          });
+          const doc = application.documents.find((d) => d.id === docId);
+          const label = doc?.label ?? "Document";
+          const messages: Record<DocumentReviewStatus, { msg: string; tone: "success" | "info" | "warning" | "danger" }> = {
+            approved: {
+              msg: `${label} approved for ${application.studentName}.`,
+              tone: "success"
+            },
+            rejected: {
+              msg: `${label} rejected for ${application.studentName}.`,
+              tone: "danger"
+            },
+            concern_raised: {
+              msg: `Concern raised on ${label} for ${application.studentName}.`,
+              tone: "warning"
+            },
+            pending_review: {
+              msg: `${label} marked pending for ${application.studentName}.`,
+              tone: "info"
+            }
+          };
+          push(messages[nextStatus].msg, messages[nextStatus].tone);
+          setReviewDocId(null);
+        }}
+      />
     </div>
   );
 }
@@ -511,51 +563,63 @@ function ClaimsTab({ a }: { a: Application }) {
   );
 }
 
-function DocumentsTab({ a }: { a: Application }) {
+function DocumentsTab({
+  a,
+  onReview
+}: {
+  a: Application;
+  onReview: (docId: string) => void;
+}) {
   return (
     <ul className="divide-y divide-line-subtle">
-      {a.documents.map((d) => (
-        <li key={d.id} className="flex items-start justify-between gap-3 py-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-muted">
-              <FileText className="h-4 w-4" aria-hidden />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-ink">{d.label}</p>
-              <p className="text-xs text-ink-muted">
-                Uploaded {formatDateTime(d.uploadedAt)}
-              </p>
-              {d.remarks ? (
-                <p className="mt-1 rounded-md bg-warning-50 px-2 py-1 text-xs text-warning-ink">
-                  {d.remarks}
+      {a.documents.map((d) => {
+        const rs = reviewStatus(d.status);
+        const tone = reviewStatusTone(rs);
+        return (
+          <li
+            key={d.id}
+            className="flex flex-col gap-3 py-3 sm:flex-row sm:items-start sm:justify-between"
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-muted">
+                <FileText className="h-4 w-4" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink">
+                  {d.label}
                 </p>
-              ) : null}
+                <p className="text-xs text-ink-muted">
+                  Uploaded {formatDateTime(d.uploadedAt)} · {mimeLabel(d.mime)}
+                </p>
+                {d.reviewedBy && d.reviewedAt ? (
+                  <p className="text-[11px] text-ink-muted">
+                    Last reviewed by {d.reviewedBy} ·{" "}
+                    {formatDateTime(d.reviewedAt)}
+                  </p>
+                ) : null}
+                {d.remarks ? (
+                  <p className="mt-1 rounded-md bg-warning-50 px-2 py-1 text-xs text-warning-ink">
+                    {d.remarks}
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
-          <div className="flex-shrink-0">
-            <Badge
-              tone={
-                d.status === "verified"
-                  ? "success"
-                  : d.status === "rejected"
-                    ? "danger"
-                    : d.status === "discrepancy"
-                      ? "warning"
-                      : "neutral"
-              }
-              dot
-            >
-              {d.status === "verified"
-                ? "Verified"
-                : d.status === "rejected"
-                  ? "Rejected"
-                  : d.status === "discrepancy"
-                    ? "Discrepancy"
-                    : "Pending review"}
-            </Badge>
-          </div>
-        </li>
-      ))}
+            <div className="flex flex-shrink-0 items-center gap-2 self-start sm:self-center">
+              <Badge tone={tone === "neutral" ? "neutral" : tone} dot>
+                {reviewStatusLabel(rs)}
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Eye className="h-4 w-4" />}
+                onClick={() => onReview(d.id)}
+              >
+                Review
+              </Button>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -607,5 +671,220 @@ function HistoryTab({ a }: { a: Application }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+// ───────────────────── Document review modal ─────────────────────
+
+type ReviewKind = DocumentReviewStatus;
+
+function DocumentReviewModal({
+  application,
+  documentId,
+  onClose,
+  onCommit
+}: {
+  application: Application;
+  documentId: string | null;
+  onClose: () => void;
+  onCommit: (
+    docId: string,
+    nextStatus: DocumentReviewStatus,
+    note: string | undefined
+  ) => void;
+}) {
+  const doc = useMemo<DocumentEntry | undefined>(() => {
+    if (!documentId) return undefined;
+    return application.documents.find((d) => d.id === documentId);
+  }, [application.documents, documentId]);
+
+  const [note, setNote] = useState("");
+  const [pending, setPending] = useState<ReviewKind | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Reset local state every time a different document opens (or the
+  // modal closes and reopens on the same document).
+  useEffect(() => {
+    setNote("");
+    setError(null);
+    setPending(null);
+  }, [documentId]);
+
+  const open = !!doc;
+
+  const submit = (kind: ReviewKind) => {
+    if (!doc) return;
+    if ((kind === "rejected" || kind === "concern_raised") && note.trim() === "") {
+      setError(
+        kind === "rejected"
+          ? "A reviewer note explaining the rejection is required."
+          : "Describe the concern so the student can act on it."
+      );
+      return;
+    }
+    setError(null);
+    setPending(kind);
+    window.setTimeout(() => {
+      const trimmed = note.trim();
+      onCommit(doc.id, kind, trimmed === "" ? undefined : trimmed);
+      setPending(null);
+    }, 600);
+  };
+
+  if (!doc) return null;
+
+  const rs = reviewStatus(doc.status);
+  const tone = reviewStatusTone(rs);
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => {
+        if (pending) return;
+        onClose();
+      }}
+      title="Review document"
+      description={`${doc.label} · ${application.studentName}`}
+      size="xl"
+      headerAction={
+        <Badge tone={tone === "neutral" ? "neutral" : tone} dot>
+          {reviewStatusLabel(rs)}
+        </Badge>
+      }
+      closeOnEscape={!pending}
+      closeOnOverlay={!pending}
+      footer={
+        <>
+          <p className="text-[11px] text-ink-muted">
+            Actions are written to the audit trail and reflected in the
+            student app.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              disabled={!!pending}
+            >
+              Close
+            </Button>
+            <Button
+              variant="warning"
+              size="sm"
+              leftIcon={<AlertTriangle className="h-4 w-4" />}
+              loading={pending === "concern_raised"}
+              disabled={!!pending}
+              onClick={() => submit("concern_raised")}
+            >
+              Raise concern
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<XCircle className="h-4 w-4 text-danger-ink" />}
+              loading={pending === "rejected"}
+              disabled={!!pending}
+              onClick={() => submit("rejected")}
+              className="text-danger-ink hover:bg-danger-50"
+            >
+              Reject
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
+              leftIcon={<CheckCircle2 className="h-4 w-4" />}
+              loading={pending === "approved"}
+              disabled={!!pending}
+              onClick={() => submit("approved")}
+            >
+              Approve
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+        {/* Preview pane */}
+        <div className="rounded-xl border border-line bg-surface-muted">
+          <div className="flex items-center justify-between border-b border-line px-4 py-2 text-xs text-ink-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <FileSearch className="h-3.5 w-3.5" /> Sample document preview
+            </span>
+            <span>{mimeLabel(doc.mime)}</span>
+          </div>
+          <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 p-8 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-md bg-white shadow-card">
+              <FileText className="h-6 w-6 text-primary-700" aria-hidden />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-ink">{doc.label}</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {application.studentName} · {application.applicationNumber}
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Uploaded {formatDateTime(doc.uploadedAt)}
+              </p>
+            </div>
+            <p className="max-w-sm rounded-md border border-dashed border-line bg-white px-3 py-2 text-xs text-ink-muted">
+              Preview unavailable in prototype. In production this pane
+              renders the original PDF or image scan with reviewer
+              annotations and zoom controls.
+            </p>
+          </div>
+        </div>
+
+        {/* Review panel */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg border border-line bg-white p-3 text-xs">
+            <p className="mb-1 font-semibold uppercase tracking-wider text-ink-muted">
+              Document metadata
+            </p>
+            <dl className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-ink">
+              <dt className="text-ink-muted">File type</dt>
+              <dd>{mimeLabel(doc.mime)}</dd>
+              <dt className="text-ink-muted">Uploaded</dt>
+              <dd>{formatDateTime(doc.uploadedAt)}</dd>
+              <dt className="text-ink-muted">Current status</dt>
+              <dd>{reviewStatusLabel(rs)}</dd>
+              {doc.reviewedBy ? (
+                <>
+                  <dt className="text-ink-muted">Last reviewer</dt>
+                  <dd>{doc.reviewedBy}</dd>
+                </>
+              ) : null}
+              <dt className="text-ink-muted">Application</dt>
+              <dd className="font-mono">{application.applicationNumber}</dd>
+            </dl>
+          </div>
+
+          <FieldShell
+            label="Reviewer note"
+            hint="Required for Reject and Raise concern. Visible to the student when concerns are raised."
+          >
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. Name on document does not match application form."
+              rows={5}
+            />
+          </FieldShell>
+
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-md border border-danger/30 bg-danger-50 px-3 py-2 text-xs text-danger-ink"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <div className="rounded-md border border-line-subtle bg-surface-muted p-2.5 text-[11px] leading-snug text-ink-muted">
+            Approve clears the document. Reject removes it from the verified
+            set. Raise concern flags the application as discrepancy and
+            notifies the student to re-upload.
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
