@@ -26,6 +26,11 @@ import { useApplications } from "@/providers/applications-provider";
 import { useSession } from "@/providers/session-provider";
 import { COLLEGES } from "@/lib/mock-data";
 import { categoryLabel, formatDate } from "@/lib/format";
+import {
+  getCollegeScopedApplications,
+  isCollegeAdmin,
+  isStateAdmin
+} from "@/lib/scoping";
 
 export default function Page() {
   return (
@@ -41,13 +46,21 @@ function CollegeOps() {
   const { applications } = useApplications();
   const { session, switchRole } = useSession();
 
-  // Show GC Sanjauli view by default for state admin demo
-  const collegeId = session?.collegeId ?? "gc-sanjauli";
-  const college = COLLEGES.find((c) => c.id === collegeId) ?? COLLEGES[0];
+  const stateAdmin = isStateAdmin(session);
+  const collegeAdmin = isCollegeAdmin(session);
+  const missingCollegeAssignment = collegeAdmin && !session?.collegeId;
+
+  // State Admin previews GC Sanjauli; College Admin sees their own.
+  const previewCollegeId = "gc-sanjauli";
+  const collegeId = session?.collegeId ?? (stateAdmin ? previewCollegeId : undefined);
+  const college = (collegeId && COLLEGES.find((c) => c.id === collegeId)) || COLLEGES[0];
 
   const collegeApps = useMemo(
-    () => applications.filter((a) => a.collegeId === college.id),
-    [applications, college.id]
+    () =>
+      collegeId
+        ? getCollegeScopedApplications(session, applications, collegeId)
+        : [],
+    [session, applications, collegeId]
   );
 
   const today = new Date().toDateString();
@@ -93,14 +106,12 @@ function CollegeOps() {
   }));
   const catMax = Math.max(1, ...catCounts.map((c) => c.count));
 
-  const isStateAdmin = session?.role === "state_admin";
-
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary-700">
-            College Operations
+            College Operations Centre
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-ink">{college.name}</h1>
           <p className="mt-1 text-sm text-ink-muted">
@@ -126,10 +137,20 @@ function CollegeOps() {
         </div>
       </header>
 
-      {isStateAdmin ? (
+      {missingCollegeAssignment ? (
+        <Alert
+          tone="warning"
+          title="No college assigned to your account"
+        >
+          Contact the Directorate of Higher Education to map a college to your
+          College Admin profile. Until then, no operational data is visible.
+        </Alert>
+      ) : null}
+
+      {stateAdmin ? (
         <Alert
           tone="info"
-          title="You are viewing the College Operations dashboard as State Admin"
+          title="State Admin preview of My college"
           action={
             <Button
               size="sm"
@@ -140,8 +161,8 @@ function CollegeOps() {
             </Button>
           }
         >
-          Switch to the College Admin view to act on the application queue at
-          {` ${college.name}`}.
+          You are viewing {college.name} as a State Admin. Switch to the
+          College Admin role to act on this queue.
         </Alert>
       ) : null}
 

@@ -81,19 +81,20 @@ function Reports() {
     "rejected"
   ];
   const statusBreakdown = statuses.map((s) => {
-    const count = applications.filter((a) => a.status === s).length;
+    const count = scopedApps.filter((a) => a.status === s).length;
     return { code: s, label: statusLabel(s), count, share: pct(count, total || 1) };
   });
 
   const categories: ReservationCategory[] = ["general", "obc", "sc", "st", "ews"];
   const categoryBreakdown = categories.map((c) => {
-    const count = applications.filter((a) => a.category === c).length;
+    const count = scopedApps.filter((a) => a.category === c).length;
     return { code: c, label: categoryLabel(c), count, share: pct(count, total || 1) };
   });
 
   const districtRows = useMemo(() => {
+    if (collegeAdmin) return [];
     return HP_DISTRICTS.map((d) => {
-      const inDistrict = applications.filter((a) => a.district === d.name);
+      const inDistrict = scopedApps.filter((a) => a.district === d.name);
       const colleges = new Set(inDistrict.map((a) => a.collegeId)).size;
       return {
         name: d.name,
@@ -101,45 +102,54 @@ function Reports() {
         colleges
       };
     }).sort((a, b) => b.applications - a.applications);
-  }, [applications]);
+  }, [scopedApps, collegeAdmin]);
 
   const districtMax = Math.max(1, ...districtRows.map((r) => r.applications));
 
   const seatFill = useMemo(() => {
     const sanctionedPerCollege = 90; // mock baseline per college
-    return COLLEGES.map((c) => {
-      const apps = applications.filter((a) => a.collegeId === c.id);
-      const fill = pct(apps.length, sanctionedPerCollege);
-      return {
-        college: c.name,
-        sanctioned: sanctionedPerCollege,
-        applications: apps.length,
-        fill,
-        tone:
-          fill > 100
-            ? ("danger" as const)
-            : fill >= 60
-              ? ("warning" as const)
-              : ("success" as const)
-      };
-    })
+    const colleges = collegeAdmin && session?.collegeId
+      ? COLLEGES.filter((c) => c.id === session.collegeId)
+      : COLLEGES;
+    return colleges
+      .map((c) => {
+        const apps = scopedApps.filter((a) => a.collegeId === c.id);
+        const fill = pct(apps.length, sanctionedPerCollege);
+        return {
+          college: c.name,
+          sanctioned: sanctionedPerCollege,
+          applications: apps.length,
+          fill,
+          tone:
+            fill > 100
+              ? ("danger" as const)
+              : fill >= 60
+                ? ("warning" as const)
+                : ("success" as const)
+        };
+      })
       .sort((a, b) => b.fill - a.fill)
       .slice(0, 8);
-  }, [applications]);
+  }, [scopedApps, collegeAdmin, session?.collegeId]);
+
+  const myCollegeName = session?.collegeName ?? "your college";
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary-700">
-            Reports & analytics
+            {collegeAdmin ? "My college reports" : "Reports & analytics"}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-ink">
-            Cycle 2026-27 reports
+            {collegeAdmin
+              ? `Cycle 2026-27 — ${myCollegeName}`
+              : "Cycle 2026-27 reports"}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Status, category, district and seat utilisation breakdowns. Updated
-            in real-time from the applications register.
+            {collegeAdmin
+              ? `Status, category and seat utilisation for ${myCollegeName}. Updated in real-time from the applications register.`
+              : "Status, category, district and seat utilisation breakdowns across the state. Updated in real-time from the applications register."}
           </p>
         </div>
       </header>
@@ -254,49 +264,81 @@ function Reports() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        {/* District table */}
-        <Card>
-          <CardHeader
-            title="District-wise application count"
-            description="Applications received per HP district"
-          />
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="data-table w-full min-w-[420px]">
-              <thead>
-                <tr>
-                  <th>District</th>
-                  <th>Applications</th>
-                  <th className="text-right">Colleges</th>
-                </tr>
-              </thead>
-              <tbody>
-                {districtRows.map((d) => (
-                  <tr key={d.name}>
-                    <td className="font-medium">{d.name}</td>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <ProgressBar
-                          value={Math.round((d.applications / districtMax) * 100)}
-                          tone="primary"
-                        />
-                        <span className="w-10 text-right tabular-nums text-sm">
-                          {d.applications}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="text-right tabular-nums">{d.colleges}</td>
+        {collegeAdmin ? (
+          <Card>
+            <CardHeader
+              title="My college summary"
+              description={`Snapshot for ${myCollegeName}`}
+            />
+            <CardBody className="grid grid-cols-2 gap-3 text-sm">
+              <SummaryRow label="Total applications" value={total} />
+              <SummaryRow label="Verified" value={verified} tone="success" />
+              <SummaryRow label="Pending scrutiny" value={pending} tone="warning" />
+              <SummaryRow
+                label="Open discrepancies"
+                value={discrepancy}
+                tone="danger"
+              />
+              <SummaryRow
+                label="Verified share"
+                value={`${pct(verified, total || 1)}%`}
+              />
+              <SummaryRow
+                label="Pending share"
+                value={`${pct(pending, total || 1)}%`}
+              />
+            </CardBody>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader
+              title="District-wise application count"
+              description="Applications received per HP district"
+            />
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="data-table w-full min-w-[420px]">
+                <thead>
+                  <tr>
+                    <th>District</th>
+                    <th>Applications</th>
+                    <th className="text-right">Colleges</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody>
+                  {districtRows.map((d) => (
+                    <tr key={d.name}>
+                      <td className="font-medium">{d.name}</td>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <ProgressBar
+                            value={Math.round(
+                              (d.applications / districtMax) * 100
+                            )}
+                            tone="primary"
+                          />
+                          <span className="w-10 text-right tabular-nums text-sm">
+                            {d.applications}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="text-right tabular-nums">{d.colleges}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         {/* Seat fill report */}
         <Card>
           <CardHeader
             title="Seat fill utilisation"
-            description="Applications received vs sanctioned seats per college"
+            description={
+              collegeAdmin
+                ? `Applications received vs sanctioned seats — ${myCollegeName}`
+                : "Applications received vs sanctioned seats per college"
+            }
           />
           <div className="overflow-x-auto scrollbar-thin">
             <table className="data-table w-full min-w-[520px]">
@@ -332,6 +374,33 @@ function Reports() {
           </div>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: "success" | "warning" | "danger";
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-success-ink"
+      : tone === "warning"
+        ? "text-warning-ink"
+        : tone === "danger"
+          ? "text-danger-ink"
+          : "text-ink";
+  return (
+    <div className="flex flex-col gap-0.5 rounded-md border border-line bg-surface-muted px-3 py-2">
+      <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+        {label}
+      </span>
+      <span className={`text-lg font-semibold ${valueClass}`}>{value}</span>
     </div>
   );
 }

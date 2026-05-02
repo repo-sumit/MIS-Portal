@@ -18,7 +18,15 @@ export const metadata: Metadata = {
     "Official Admin Portal for the Department of Higher Education, Government of Himachal Pradesh.",
   applicationName: "HP HE MIS",
   authors: [{ name: "Directorate of Higher Education, Himachal Pradesh" }],
-  robots: { index: false, follow: false }
+  robots: { index: false, follow: false },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/assets/HPU_Logo.png", type: "image/png" }
+    ],
+    apple: [{ url: "/assets/HPU_Logo.png" }],
+    shortcut: ["/favicon.ico"]
+  }
 };
 
 export const viewport: Viewport = {
