@@ -17,7 +17,11 @@ import {
   ChevronDown,
   CalendarClock,
   Trophy,
-  GraduationCap
+  GraduationCap,
+  Landmark,
+  School,
+  ArrowLeftRight,
+  Check
 } from "lucide-react";
 import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/providers/toast-provider";
@@ -392,6 +396,8 @@ function UserMenu({
   onSignOut: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [switching, setSwitching] = useState<RoleCode | null>(null);
+
   const initials = name
     .replace(/^Dr\.\s+/, "")
     .split(" ")
@@ -399,6 +405,16 @@ function UserMenu({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const handleSwitch = (target: RoleCode) => {
+    if (target === role || switching) return;
+    setSwitching(target);
+    // Brief delay so the user sees the loading state before the page reload
+    window.setTimeout(() => {
+      setOpen(false);
+      onSwitch(target);
+    }, 280);
+  };
 
   return (
     <div className="relative">
@@ -432,55 +448,63 @@ function UserMenu({
           />
           <div
             role="menu"
-            className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-line bg-white p-2 shadow-elevated"
+            className="absolute right-0 z-40 mt-2 w-[340px] max-w-[92vw] rounded-xl border border-line bg-white p-2 shadow-elevated"
           >
-            <div className="border-b border-line-subtle p-2">
-              <p className="text-sm font-semibold text-ink">{name}</p>
-              <p className="text-xs text-ink-muted">
-                {role === "state_admin"
-                  ? "Directorate of Higher Education"
-                  : (collegeName ?? "Assigned college")}
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <Badge tone="primary" dot>
-                  {role === "state_admin" ? "State Admin" : "College Admin"}
-                </Badge>
-                <Badge tone="success">
-                  <ShieldCheck className="mr-1 h-3 w-3" /> Active
-                </Badge>
+            {/* Account summary */}
+            <div className="border-b border-line-subtle p-3">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-sm font-semibold text-white">
+                  {initials}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {name}
+                  </p>
+                  <p className="truncate text-xs text-ink-muted">
+                    {role === "state_admin"
+                      ? "Directorate of Higher Education"
+                      : (collegeName ?? "Assigned college")}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <Badge tone="primary" dot>
+                      {role === "state_admin" ? "State Admin" : "College Admin"}
+                    </Badge>
+                    <Badge tone="success">
+                      <ShieldCheck className="mr-1 h-3 w-3" /> Active
+                    </Badge>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-2">
-              <p className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-                Demo role view
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onSwitch("state_admin");
-                }}
-                className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-ink hover:bg-surface-subtle ${role === "state_admin" ? "font-semibold" : ""}`}
-              >
-                State Admin
-                {role === "state_admin" ? (
-                  <Badge tone="primary">Current</Badge>
-                ) : null}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onSwitch("college_admin");
-                }}
-                className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-sm text-ink hover:bg-surface-subtle ${role === "college_admin" ? "font-semibold" : ""}`}
-              >
-                College Admin
-                {role === "college_admin" ? (
-                  <Badge tone="primary">Current</Badge>
-                ) : null}
-              </button>
+
+            {/* Role switcher */}
+            <div className="p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink">
+                  Switch workspace
+                </p>
+                <span className="flex items-center gap-1 text-[10px] text-ink-muted">
+                  <ArrowLeftRight className="h-3 w-3" /> Demo only
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <RoleCard
+                  role="state_admin"
+                  active={role === "state_admin"}
+                  loading={switching === "state_admin"}
+                  disabled={!!switching}
+                  onClick={() => handleSwitch("state_admin")}
+                />
+                <RoleCard
+                  role="college_admin"
+                  active={role === "college_admin"}
+                  loading={switching === "college_admin"}
+                  disabled={!!switching}
+                  onClick={() => handleSwitch("college_admin")}
+                />
+              </div>
             </div>
+
             <div className="border-t border-line-subtle p-2">
               <button
                 type="button"
@@ -488,7 +512,8 @@ function UserMenu({
                   onSignOut();
                   setOpen(false);
                 }}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-danger-ink hover:bg-danger-50"
+                disabled={!!switching}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-danger-ink hover:bg-danger-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <LogOut className="h-4 w-4" /> Sign out
               </button>
@@ -497,6 +522,77 @@ function UserMenu({
         </>
       ) : null}
     </div>
+  );
+}
+
+function RoleCard({
+  role,
+  active,
+  loading,
+  disabled,
+  onClick
+}: {
+  role: RoleCode;
+  active: boolean;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const isState = role === "state_admin";
+  const Icon = isState ? Landmark : School;
+  const title = isState ? "State Admin" : "College Admin";
+  const subtitle = isState
+    ? "View statewide admissions, reports and lifecycle controls."
+    : "Manage applications, scrutiny and seats for the assigned college.";
+  const scope = isState ? "Statewide access" : "College scoped";
+
+  return (
+    <button
+      type="button"
+      role="menuitemradio"
+      aria-checked={active}
+      onClick={onClick}
+      disabled={disabled || active}
+      className={`group flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+        active
+          ? "border-primary-600 bg-primary-50/70"
+          : "border-line bg-white hover:border-primary-300 hover:bg-primary-50/40"
+      } disabled:cursor-default`}
+    >
+      <span
+        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md ${
+          active
+            ? "bg-primary-600 text-white"
+            : "bg-surface-subtle text-primary-700 group-hover:bg-primary-50"
+        }`}
+      >
+        <Icon className="h-[18px] w-[18px]" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-ink">{title}</span>
+          {active ? (
+            <Badge tone="primary" className="flex-shrink-0">
+              <Check className="mr-0.5 h-3 w-3" /> Current
+            </Badge>
+          ) : loading ? (
+            <span className="flex flex-shrink-0 items-center gap-1 text-[11px] font-medium text-primary-700">
+              <span
+                aria-hidden
+                className="h-3 w-3 rounded-full border-2 border-primary-600 border-t-transparent animate-spin-slow"
+              />
+              Switching…
+            </span>
+          ) : null}
+        </span>
+        <span className="mt-0.5 block text-[12px] leading-snug text-ink-muted">
+          {subtitle}
+        </span>
+        <span className="mt-1.5 inline-flex">
+          <Badge tone={isState ? "info" : "neutral"}>{scope}</Badge>
+        </span>
+      </span>
+    </button>
   );
 }
 

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ShieldCheck, Lock, User2, ArrowRight, Info } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/providers/toast-provider";
 import { Button } from "@/components/ui/button";
@@ -46,12 +47,14 @@ export default function LoginPage() {
 
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-shell items-center gap-3 px-4 py-3">
-          <span
-            aria-hidden
-            className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-600 text-sm font-bold text-white"
-          >
-            HP
-          </span>
+          <Image
+            src="/assets/HPU_Logo.png"
+            alt="HP Higher Education MIS"
+            width={44}
+            height={44}
+            priority
+            className="h-11 w-11 flex-shrink-0 object-contain"
+          />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-ink">
               HP Higher Education MIS
