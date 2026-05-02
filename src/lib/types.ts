@@ -112,3 +112,63 @@ export interface ToastEntry {
   message: string;
   tone: ToastTone;
 }
+
+// ───────────────────── Merit & Allocation lifecycle ─────────────────────
+
+export interface MeritRankEntry {
+  rank: number;
+  applicationId: string;
+  applicationNumber: string;
+  studentName: string;
+  category: ReservationCategory;
+  bofPercentage: number;
+  firstPreferenceCollegeId: string;
+  firstPreferenceCollegeName: string;
+  status: "verified" | "conditional";
+}
+
+export interface MeritOverlay {
+  courseId: CourseCode;
+  courseName: string;
+  candidatesCount: number;
+  ranks: MeritRankEntry[];
+  publishedAt: string;
+  publishedBy: string;
+  publishVersion: number;
+}
+
+/** Keyed by CourseCode. */
+export type MeritOverlayMap = Partial<Record<CourseCode, MeritOverlay>>;
+
+export type AllocationOfferStatus =
+  | "offered"
+  | "freeze"
+  | "float"
+  | "decline"
+  | "no_seat";
+
+export interface AllocationEntry {
+  rank: number;
+  applicationId: string;
+  applicationNumber: string;
+  studentName: string;
+  category: ReservationCategory;
+  bofPercentage: number;
+  offeredCollegeId: string | null;
+  offeredCollegeName: string | null;
+  feeAmount: number;
+  feeStatus: "pending" | "paid" | "waived";
+  offerStatus: AllocationOfferStatus;
+}
+
+export interface AllocationOverlay {
+  courseId: CourseCode;
+  courseName: string;
+  roundNumber: number;
+  runAt: string;
+  runBy: string;
+  seatsOffered: number;
+  entries: AllocationEntry[];
+}
+
+export type AllocationOverlayMap = Partial<Record<CourseCode, AllocationOverlay>>;

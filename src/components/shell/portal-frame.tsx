@@ -15,7 +15,9 @@ import {
   LogOut,
   ShieldCheck,
   ChevronDown,
-  CalendarClock
+  CalendarClock,
+  Trophy,
+  GraduationCap
 } from "lucide-react";
 import { useSession } from "@/providers/session-provider";
 import { useToast } from "@/providers/toast-provider";
@@ -52,6 +54,20 @@ const NAV: NavItem[] = [
     icon: <FileSpreadsheet className="h-[18px] w-[18px]" aria-hidden />,
     match: (p) => p.startsWith("/applications"),
     roles: ["state_admin", "college_admin"]
+  },
+  {
+    href: "/merit",
+    label: "Merit",
+    icon: <Trophy className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p.startsWith("/merit"),
+    roles: ["state_admin"]
+  },
+  {
+    href: "/allocation",
+    label: "Allocation",
+    icon: <GraduationCap className="h-[18px] w-[18px]" aria-hidden />,
+    match: (p) => p.startsWith("/allocation"),
+    roles: ["state_admin"]
   },
   {
     href: "/college/seats",

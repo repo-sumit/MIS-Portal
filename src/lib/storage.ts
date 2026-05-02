@@ -1,10 +1,17 @@
-import type { Application, Session } from "./types";
+import type {
+  AllocationOverlayMap,
+  Application,
+  MeritOverlayMap,
+  Session
+} from "./types";
 import { buildSeedApplications } from "./mock-data";
 
 export const STORAGE_KEYS = {
   session: "hp-mis:portal-session",
   applications: "hp-mis:applications",
-  reports: "hp-mis:reports"
+  reports: "hp-mis:reports",
+  merit: "hp-mis:merit",
+  allocation: "hp-mis:allocation"
 } as const;
 
 export function isBrowser(): boolean {
@@ -55,4 +62,40 @@ export function saveSession(session: Session | null): void {
     return;
   }
   window.localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session));
+}
+
+// ───────────────────── Merit / Allocation lifecycle ─────────────────────
+
+export function loadMerit(): MeritOverlayMap {
+  if (!isBrowser()) return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.merit);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === "object" ? parsed : {}) as MeritOverlayMap;
+  } catch {
+    return {};
+  }
+}
+
+export function saveMerit(map: MeritOverlayMap): void {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(STORAGE_KEYS.merit, JSON.stringify(map));
+}
+
+export function loadAllocation(): AllocationOverlayMap {
+  if (!isBrowser()) return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.allocation);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === "object" ? parsed : {}) as AllocationOverlayMap;
+  } catch {
+    return {};
+  }
+}
+
+export function saveAllocation(map: AllocationOverlayMap): void {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(STORAGE_KEYS.allocation, JSON.stringify(map));
 }

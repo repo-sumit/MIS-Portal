@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "@/providers/session-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { ApplicationsProvider } from "@/providers/applications-provider";
+import { LifecycleProvider } from "@/providers/lifecycle-provider";
 
 const notoSans = Noto_Sans({
   subsets: ["latin"],
@@ -45,7 +46,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-surface-subtle font-sans text-ink antialiased">
         <SessionProvider>
           <ToastProvider>
-            <ApplicationsProvider>{children}</ApplicationsProvider>
+            <ApplicationsProvider>
+              <LifecycleProvider>{children}</LifecycleProvider>
+            </ApplicationsProvider>
           </ToastProvider>
         </SessionProvider>
       </body>
