@@ -4,7 +4,17 @@
       "Bash(npm install *)",
       "Bash(npx tsc *)",
       "Bash(echo \"exit=$?\")",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -rf .next)",
+      "Bash(echo \"next removed: $?\")",
+      "Bash(rm -rf node_modules/.cache)",
+      "Bash(echo \"cache removed: $?\")",
+      "Bash(rm -f tsconfig.tsbuildinfo)",
+      "Bash(echo \"tsc exit=$?\")",
+      "Bash(curl -s -o /tmp/merit.html -w \"merit: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/merit)",
+      "Bash(curl -s -o /tmp/alloc.html -w \"alloc: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/allocation)",
+      "Bash(curl -s -o /tmp/login.html -w \"login: HTTP %{http_code} %{size_download}b\\\\n\" http://localhost:3009/login)"
     ]
   }
 }
