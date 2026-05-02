@@ -296,11 +296,18 @@ function Reports() {
               description="Applications received per HP district"
             />
             <div className="overflow-x-auto scrollbar-thin">
-              <table className="data-table w-full min-w-[420px]">
+              <table className="data-table w-full min-w-[480px] table-fixed">
+                <colgroup>
+                  <col className="w-[34%]" />
+                  <col />
+                  <col className="w-[16%]" />
+                  <col className="w-[14%]" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>District</th>
-                    <th>Applications</th>
+                    <th>Distribution</th>
+                    <th className="text-right">Applications</th>
                     <th className="text-right">Colleges</th>
                   </tr>
                 </thead>
@@ -309,17 +316,15 @@ function Reports() {
                     <tr key={d.name}>
                       <td className="font-medium">{d.name}</td>
                       <td>
-                        <div className="flex items-center gap-3">
-                          <ProgressBar
-                            value={Math.round(
-                              (d.applications / districtMax) * 100
-                            )}
-                            tone="primary"
-                          />
-                          <span className="w-10 text-right tabular-nums text-sm">
-                            {d.applications}
-                          </span>
-                        </div>
+                        <ProgressBar
+                          value={Math.round(
+                            (d.applications / districtMax) * 100
+                          )}
+                          tone="primary"
+                        />
+                      </td>
+                      <td className="text-right tabular-nums">
+                        {d.applications.toLocaleString("en-IN")}
                       </td>
                       <td className="text-right tabular-nums">{d.colleges}</td>
                     </tr>
@@ -341,29 +346,39 @@ function Reports() {
             }
           />
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="data-table w-full min-w-[520px]">
+            <table className="data-table w-full min-w-[600px] table-fixed">
+              <colgroup>
+                <col />
+                <col className="w-[16%]" />
+                <col className="w-[16%]" />
+                <col className="w-[24%]" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>College</th>
                   <th className="text-right">Sanctioned</th>
                   <th className="text-right">Applications</th>
-                  <th>Fill</th>
+                  <th className="text-right">Fill</th>
                 </tr>
               </thead>
               <tbody>
                 {seatFill.map((row) => (
                   <tr key={row.college}>
-                    <td className="font-medium">{row.college}</td>
-                    <td className="text-right tabular-nums">{row.sanctioned}</td>
+                    <td className="truncate font-medium">{row.college}</td>
                     <td className="text-right tabular-nums">
-                      {row.applications}
+                      {row.sanctioned.toLocaleString("en-IN")}
                     </td>
-                    <td className="w-[180px]">
-                      <div className="flex items-center gap-2">
-                        <ProgressBar
-                          value={Math.min(100, row.fill)}
-                          tone={row.tone}
-                        />
+                    <td className="text-right tabular-nums">
+                      {row.applications.toLocaleString("en-IN")}
+                    </td>
+                    <td>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="hidden flex-1 sm:block">
+                          <ProgressBar
+                            value={Math.min(100, row.fill)}
+                            tone={row.tone}
+                          />
+                        </span>
                         <Badge tone={row.tone}>{row.fill}%</Badge>
                       </div>
                     </td>

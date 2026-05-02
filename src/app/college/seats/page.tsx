@@ -149,10 +149,23 @@ function SeatMatrix() {
           }
         />
         <div className="overflow-x-auto scrollbar-thin">
-          <table className="data-table w-full min-w-[960px]">
+          <table className="data-table w-full min-w-[1000px] table-fixed">
+            <colgroup>
+              <col className="w-[260px]" />
+              <col className="w-[110px]" />
+              <col className="w-[68px]" />
+              <col className="w-[68px]" />
+              <col className="w-[68px]" />
+              <col className="w-[68px]" />
+              <col className="w-[68px]" />
+              <col className="w-[68px]" />
+              <col className="w-[68px]" />
+              <col className="w-[130px]" />
+              <col className="w-[110px]" />
+            </colgroup>
             <thead>
               <tr>
-                <th className="min-w-[260px]">Course / track</th>
+                <th>Course / track</th>
                 <th className="text-right">
                   <span className="inline-flex flex-col items-end">
                     <span>Sanctioned</span>

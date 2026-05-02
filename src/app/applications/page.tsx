@@ -72,6 +72,8 @@ function ApplicationsView() {
   );
 
   const missingCollegeAssignment = collegeAdmin && !session?.collegeId;
+  const PAGE_SIZE = 50;
+  const [showAll, setShowAll] = useState(false);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -325,7 +327,17 @@ function ApplicationsView() {
           <>
             {/* Desktop table */}
             <div className="hidden overflow-x-auto scrollbar-thin md:block">
-              <table className="data-table w-full min-w-[820px]">
+              <table className="data-table w-full min-w-[940px] table-fixed">
+                <colgroup>
+                  <col className="w-[14%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[10%]" />
+                  <col />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Application</th>
@@ -334,12 +346,12 @@ function ApplicationsView() {
                     <th>Course</th>
                     <th>Category</th>
                     <th>Status</th>
-                    <th>Submitted</th>
-                    <th aria-label="Open" />
+                    <th className="text-right">Submitted</th>
+                    <th className="text-right" aria-label="Open" />
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((a) => (
+                  {(showAll ? filtered : filtered.slice(0, PAGE_SIZE)).map((a) => (
                     <tr
                       key={a.id}
                       className={
@@ -380,7 +392,7 @@ function ApplicationsView() {
                           ) : null}
                         </div>
                       </td>
-                      <td className="text-xs text-ink-muted">
+                      <td className="text-right text-xs text-ink-muted">
                         {formatDate(a.submittedAt)}
                       </td>
                       <td className="text-right">
@@ -395,11 +407,26 @@ function ApplicationsView() {
                   ))}
                 </tbody>
               </table>
+              {filtered.length > PAGE_SIZE ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle px-5 py-3 text-xs text-ink-muted">
+                  <span>
+                    Showing {showAll ? filtered.length : Math.min(PAGE_SIZE, filtered.length)} of{" "}
+                    {filtered.length.toLocaleString("en-IN")} applications
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowAll((v) => !v)}
+                  >
+                    {showAll ? "Show first 50" : "Show all"}
+                  </Button>
+                </div>
+              ) : null}
             </div>
 
             {/* Mobile list */}
             <ul className="divide-y divide-line-subtle md:hidden">
-              {filtered.map((a) => (
+              {(showAll ? filtered : filtered.slice(0, PAGE_SIZE)).map((a) => (
                 <li key={a.id} className="px-4 py-3">
                   <Link
                     href={`/applications/${a.id}`}
@@ -429,6 +456,21 @@ function ApplicationsView() {
                   </Link>
                 </li>
               ))}
+              {filtered.length > PAGE_SIZE ? (
+                <li className="flex items-center justify-between gap-2 px-4 py-3 text-xs text-ink-muted">
+                  <span>
+                    {showAll ? filtered.length : PAGE_SIZE} of{" "}
+                    {filtered.length.toLocaleString("en-IN")} shown
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowAll((v) => !v)}
+                  >
+                    {showAll ? "Show first 50" : "Show all"}
+                  </Button>
+                </li>
+              ) : null}
             </ul>
           </>
         )}

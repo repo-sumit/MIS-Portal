@@ -110,8 +110,27 @@ export const COURSES: { id: CourseCode; name: string }[] = [
   { id: "BSc", name: "Bachelor of Science" },
   { id: "BCom", name: "Bachelor of Commerce" },
   { id: "BCA", name: "Bachelor of Computer Applications" },
-  { id: "BBA", name: "Bachelor of Business Administration" }
+  { id: "BBA", name: "Bachelor of Business Administration" },
+  { id: "BVoc", name: "Bachelor of Vocation" }
 ];
+
+/** Subject combinations per course — used by application preferences and detail. */
+export const COURSE_TRACKS: Record<CourseCode, string[]> = {
+  BA: [
+    "English, Economics, Political Science",
+    "History, Hindi, Sociology",
+    "Geography, Sanskrit, Public Administration"
+  ],
+  BSc: [
+    "Physics, Chemistry, Mathematics",
+    "Botany, Zoology, Chemistry",
+    "Mathematics, Statistics, Computer Science"
+  ],
+  BCom: ["Accountancy, Business Studies, Economics"],
+  BCA: ["Computer Science core"],
+  BBA: ["Business Administration core"],
+  BVoc: ["Hospitality & Tourism", "Software Development", "Retail Management"]
+};
 
 const FIRST_NAMES = [
   "Aakash",
@@ -143,7 +162,41 @@ const FIRST_NAMES = [
   "Aditi",
   "Naman",
   "Riya",
-  "Gaurav"
+  "Gaurav",
+  "Tarun",
+  "Mehak",
+  "Harshit",
+  "Simran",
+  "Yash",
+  "Kanika",
+  "Saurabh",
+  "Nisha",
+  "Abhinav",
+  "Tisha",
+  "Pranav",
+  "Khushi",
+  "Sandeep",
+  "Snehal",
+  "Aryan",
+  "Tanvi",
+  "Gourav",
+  "Manvi",
+  "Vansh",
+  "Ritika",
+  "Dhruv",
+  "Avani",
+  "Nikhil",
+  "Mahima",
+  "Arjun",
+  "Akansha",
+  "Chirag",
+  "Vidushi",
+  "Dev",
+  "Kashvi",
+  "Yuvraj",
+  "Bhumika",
+  "Atul",
+  "Shruti"
 ];
 
 const LAST_NAMES = [
@@ -166,26 +219,104 @@ const LAST_NAMES = [
   "Bisht",
   "Rawat",
   "Chand",
-  "Parmar"
+  "Parmar",
+  "Katoch",
+  "Gupta",
+  "Singh",
+  "Dhaliwal",
+  "Sankhyan",
+  "Tegta",
+  "Pundir",
+  "Bragta",
+  "Salaria",
+  "Jaryal",
+  "Lehri",
+  "Bhatia",
+  "Aggarwal",
+  "Kalia"
 ];
 
-const STATUSES: ApplicationStatus[] = [
+const FATHER_FIRST_NAMES = [
+  "Suresh",
+  "Ramesh",
+  "Mahesh",
+  "Dinesh",
+  "Ajay",
+  "Vinod",
+  "Rajesh",
+  "Naresh",
+  "Anil",
+  "Subhash",
+  "Vijay",
+  "Yogesh",
+  "Pankaj",
+  "Hari",
+  "Mukesh",
+  "Ashok"
+];
+
+// Status weights used by the seed generator. Keeps the dataset realistic
+// (more verified / pending than rejected) and survives refresh because
+// the PRNG seed is fixed.
+const STATUS_WEIGHTED: ApplicationStatus[] = [
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "verified",
+  "submitted",
+  "submitted",
+  "submitted",
+  "submitted",
+  "submitted",
+  "submitted",
+  "submitted",
+  "submitted",
+  "submitted",
   "submitted",
   "under_scrutiny",
+  "under_scrutiny",
+  "under_scrutiny",
+  "under_scrutiny",
+  "under_scrutiny",
+  "under_scrutiny",
+  "under_scrutiny",
   "discrepancy_raised",
-  "verified",
+  "discrepancy_raised",
+  "discrepancy_raised",
+  "discrepancy_raised",
+  "discrepancy_raised",
   "conditional",
+  "conditional",
+  "conditional",
+  "conditional",
+  "rejected",
   "rejected"
 ];
 
-const CATEGORIES: ReservationCategory[] = [
+const CATEGORY_WEIGHTED: ReservationCategory[] = [
   "general",
   "general",
   "general",
+  "general",
+  "general",
+  "general",
+  "obc",
+  "obc",
   "obc",
   "obc",
   "sc",
+  "sc",
+  "sc",
   "st",
+  "ews",
   "ews"
 ];
 
@@ -199,6 +330,7 @@ const BOARDS = [
   "HP Board of School Education",
   "CBSE",
   "ICSE",
+  "HP Board of School Education",
   "HP Board of School Education"
 ];
 
@@ -210,38 +342,58 @@ function pseudoRandom(seed: number): () => number {
   };
 }
 
-export function buildSeedApplications(): Application[] {
+const DEFAULT_SEED_COUNT = 220;
+
+/**
+ * Deterministic seed generator. Same seed → same dataset on every refresh
+ * so localStorage rehydrates predictably. Distributes applications evenly
+ * across all colleges and courses with a bias towards `gc-sanjauli` so
+ * the College Admin demo has a meaningful queue.
+ */
+export function buildSeedApplications(count: number = DEFAULT_SEED_COUNT): Application[] {
   const rand = pseudoRandom(1729);
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
 
   const apps: Application[] = [];
-  const baseDate = new Date("2026-04-15T09:00:00");
+  const baseDate = new Date("2026-04-22T09:00:00");
+  const collegeAnchor = COLLEGES.find((c) => c.id === "gc-sanjauli") ?? COLLEGES[0];
 
-  for (let i = 0; i < 32; i++) {
-    const first = pick(FIRST_NAMES);
-    const last = pick(LAST_NAMES);
+  for (let i = 0; i < count; i++) {
+    const first = FIRST_NAMES[i % FIRST_NAMES.length];
+    const last = LAST_NAMES[(i * 3 + 7) % LAST_NAMES.length];
     const studentName = `${first} ${last}`;
-    const college = pick(COLLEGES);
-    const course = pick(COURSES);
-    const stream = pick(STREAMS);
-    const board = pick(BOARDS);
-    const category = pick(CATEGORIES);
-    const status = STATUSES[i % STATUSES.length];
 
+    // Distribute across all colleges, but anchor a quarter to GC Sanjauli
+    // so the College Admin demo has at least 50 scoped applications.
+    const college =
+      i % 4 === 0 ? collegeAnchor : COLLEGES[i % COLLEGES.length];
+    const course = COURSES[i % COURSES.length];
+    const stream = STREAMS[i % STREAMS.length];
+    const board = BOARDS[i % BOARDS.length];
+    const category = CATEGORY_WEIGHTED[i % CATEGORY_WEIGHTED.length];
+    const status = STATUS_WEIGHTED[i % STATUS_WEIGHTED.length];
+
+    const tracks = COURSE_TRACKS[course.id];
+    const combination = tracks[i % tracks.length];
+
+    const daysAgo = (i * 7) % 22;
     const submittedAt = new Date(
-      baseDate.getTime() - Math.floor(rand() * 14) * 24 * 60 * 60 * 1000
+      baseDate.getTime() - daysAgo * 24 * 60 * 60 * 1000 - (i % 9) * 3600000
     );
     const submittedIso = submittedAt.toISOString();
-    const id = `APP-${String(2026000 + i).padStart(7, "0")}`;
-    const bestOfFive = 64 + Math.floor(rand() * 30);
+    const idNum = 2026000 + i + 1;
+    const id = `APP-${String(idNum).padStart(7, "0")}`;
+    const bestOfFive = Number((58 + ((i * 13) % 41) + (rand() * 0.9)).toFixed(1));
 
-    const docs = [
-      { type: "marksheet", label: "Class XII Marksheet" },
-      { type: "domicile", label: "HP Domicile Certificate" },
-      { type: "category", label: "Category Certificate" },
-      { type: "photo", label: "Photograph" },
-      { type: "id", label: "Photo ID Proof" }
-    ].map((d, idx) => {
+    const baseDocs = [
+      { type: "marksheet", label: "Class XII Marksheet", mime: "application/pdf" as const },
+      { type: "domicile", label: "HP Domicile Certificate", mime: "image/jpeg" as const },
+      { type: "category", label: "Category Certificate", mime: "image/jpeg" as const },
+      { type: "photo", label: "Photograph", mime: "image/jpeg" as const },
+      { type: "id", label: "Photo ID Proof", mime: "image/jpeg" as const }
+    ];
+
+    const docs = baseDocs.map((d, idx) => {
       const ds: "pending" | "verified" | "rejected" | "discrepancy" =
         status === "verified"
           ? "verified"
@@ -253,38 +405,40 @@ export function buildSeedApplications(): Application[] {
               ? "discrepancy"
               : status === "conditional" && idx === 1
                 ? "discrepancy"
-                : "pending";
+                : status === "under_scrutiny"
+                  ? idx <= 1
+                    ? "verified"
+                    : "pending"
+                  : "pending";
       return {
         id: `${id}-doc-${idx}`,
         type: d.type,
         label: d.label,
         uploadedAt: submittedIso,
         status: ds,
+        mime: d.mime,
         remarks:
           ds === "rejected"
-            ? "Document is illegible. Please upload a clearer scan."
+            ? "Scan is illegible. Re-upload a clearer copy."
             : ds === "discrepancy"
-              ? "Name on document does not match application form."
+              ? "Name on document does not match the application form."
               : undefined
       };
     });
 
-    const preferences = COLLEGES.slice(0, 4).map((c, idx) => ({
+    // Build a deterministic 4-college preference list — apply college first
+    // followed by 3 alternates from the same district where possible.
+    const preferenceColleges = [
+      college,
+      ...COLLEGES.filter((c) => c.id !== college.id).slice(0, 3)
+    ];
+    const preferences = preferenceColleges.map((c, idx) => ({
       rank: idx + 1,
       collegeId: c.id,
       collegeName: c.name,
       courseId: course.id,
-      combination:
-        course.id === "BA"
-          ? "English, Economics, Political Science"
-          : course.id === "BSc"
-            ? "Physics, Chemistry, Mathematics"
-            : course.id === "BCom"
-              ? "Accountancy, Business Studies, Economics"
-              : course.id === "BCA"
-                ? "Computer Science core"
-                : "Business Administration core",
-      vacantSeats: 12 + Math.floor(rand() * 40)
+      combination,
+      vacantSeats: 8 + ((i * 5 + idx * 11) % 42)
     }));
 
     const history = [
@@ -298,14 +452,14 @@ export function buildSeedApplications(): Application[] {
         id: `${id}-h2`,
         action: "Documents uploaded",
         actor: studentName,
-        timestamp: submittedIso
+        timestamp: new Date(submittedAt.getTime() + 1800000).toISOString()
       }
     ];
 
     if (status === "verified" || status === "conditional") {
       history.push({
         id: `${id}-h3`,
-        action: status === "verified" ? "Application verified" : "Conditional accept",
+        action: status === "verified" ? "Application verified" : "Conditional accept granted",
         actor: college.principal,
         timestamp: new Date(submittedAt.getTime() + 86400000).toISOString()
       });
@@ -321,24 +475,25 @@ export function buildSeedApplications(): Application[] {
     if (status === "rejected") {
       history.push({
         id: `${id}-h3`,
-        action: "Application rejected",
+        action: "Application rejected after scrutiny",
         actor: college.principal,
         timestamp: new Date(submittedAt.getTime() + 86400000).toISOString()
       });
     }
 
-    const dob = new Date(2007, Math.floor(rand() * 12), 1 + Math.floor(rand() * 27));
+    const dobYear = 2007 - (i % 2);
+    const dob = new Date(dobYear, i % 12, 1 + (i % 27));
 
     apps.push({
       id,
       applicationNumber: id,
       studentName,
-      fatherName: `${pick(["Suresh", "Ramesh", "Mahesh", "Dinesh", "Ajay", "Vinod"])} ${last}`,
+      fatherName: `${FATHER_FIRST_NAMES[(i * 5 + 3) % FATHER_FIRST_NAMES.length]} ${last}`,
       dob: dob.toISOString().slice(0, 10),
-      mobile: `+91 9${Math.floor(100000000 + rand() * 899999999)}`.slice(0, 14),
-      email: `${first.toLowerCase()}.${last.toLowerCase()}@hpmis.in`,
-      address: `${pick(["House 12", "House 48", "Flat 3B", "Ward 5", "Lane 7"])}, ${college.district}, Himachal Pradesh`,
-      aadhaarMasked: `XXXX-XXXX-${1000 + Math.floor(rand() * 8999)}`,
+      mobile: `+91 9${String(700000000 + (i * 7919) % 299999999).padStart(9, "0")}`,
+      email: `${first.toLowerCase()}.${last.toLowerCase()}${i}@hpmis.in`,
+      address: `${pick(["House 12", "House 48", "Flat 3B", "Ward 5", "Lane 7", "Block C", "Mohalla 4"])}, ${college.district}, Himachal Pradesh`,
+      aadhaarMasked: `XXXX-XXXX-${1000 + (i * 977) % 8999}`,
       district: college.district,
       collegeId: college.id,
       collegeName: college.name,
@@ -351,15 +506,15 @@ export function buildSeedApplications(): Application[] {
       academicDetails: {
         board,
         yearOfPassing: 2026,
-        rollNumber: `R${1000000 + Math.floor(rand() * 8999999)}`,
+        rollNumber: `R${1000000 + (i * 1031) % 8999999}`,
         bestOfFive,
         stream
       },
       claims: {
         category,
         domicile: "Himachal Pradesh",
-        pwd: rand() < 0.05,
-        sgc: rand() < 0.07
+        pwd: i % 23 === 0,
+        sgc: i % 19 === 0 && category !== "general"
       },
       preferences,
       history,
@@ -367,7 +522,7 @@ export function buildSeedApplications(): Application[] {
         status === "discrepancy_raised" ? 1 : status === "conditional" ? 1 : 0,
       discrepancyReason:
         status === "discrepancy_raised"
-          ? "Name on Class XII Marksheet does not match application form."
+          ? "Name on Class XII Marksheet does not match the application form."
           : undefined
     });
   }

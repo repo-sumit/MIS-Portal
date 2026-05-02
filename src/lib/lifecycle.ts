@@ -114,7 +114,8 @@ const FEE_BY_COURSE: Record<CourseCode, number> = {
   BSc: 3200,
   BCom: 2800,
   BCA: 6800,
-  BBA: 6200
+  BBA: 6200,
+  BVoc: 4500
 };
 
 /**

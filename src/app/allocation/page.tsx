@@ -256,7 +256,16 @@ function Allocation() {
 
                 {overlay && expanded ? (
                   <div className="overflow-x-auto scrollbar-thin">
-                    <table className="data-table w-full min-w-[760px]">
+                    <table className="data-table w-full min-w-[820px] table-fixed">
+                      <colgroup>
+                        <col className="w-[8%]" />
+                        <col className="w-[22%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[12%]" />
+                      </colgroup>
                       <thead>
                         <tr>
                           <th className="text-right">Rank</th>

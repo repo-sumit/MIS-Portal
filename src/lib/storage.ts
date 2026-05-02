@@ -8,7 +8,10 @@ import { buildSeedApplications } from "./mock-data";
 
 export const STORAGE_KEYS = {
   session: "hp-mis:portal-session",
-  applications: "hp-mis:applications",
+  // v2 is the expanded 220-row deterministic seed (mock-data.ts). The
+  // suffix ensures browsers that cached the v1 payload (32 rows) refresh
+  // to the richer dataset on next visit without manual intervention.
+  applications: "hp-mis:applications:v2",
   reports: "hp-mis:reports",
   merit: "hp-mis:merit",
   allocation: "hp-mis:allocation"

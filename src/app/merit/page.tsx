@@ -229,7 +229,16 @@ function Merit() {
 
                 {overlay && expanded ? (
                   <div className="overflow-x-auto scrollbar-thin">
-                    <table className="data-table w-full min-w-[680px]">
+                    <table className="data-table w-full min-w-[720px] table-fixed">
+                      <colgroup>
+                        <col className="w-[8%]" />
+                        <col className="w-[15%]" />
+                        <col className="w-[20%]" />
+                        <col className="w-[27%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[8%]" />
+                        <col className="w-[10%]" />
+                      </colgroup>
                       <thead>
                         <tr>
                           <th className="text-right">Rank</th>

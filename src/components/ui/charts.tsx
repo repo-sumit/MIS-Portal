@@ -165,34 +165,68 @@ export function HBar({
   return (
     <ul className="flex flex-col gap-3">
       {rows.map((r) => {
-        const primaryPct = Math.round((r.primary / max) * 100);
+        const primaryPct = Math.max(0, Math.min(100, (r.primary / max) * 100));
         const secondaryPct =
-          r.secondary !== undefined ? Math.round((r.secondary / max) * 100) : 0;
+          r.secondary !== undefined
+            ? Math.max(0, Math.min(100, (r.secondary / max) * 100))
+            : 0;
+        // Track + bar layout: bar fills `[trackPct]%` of the row; the value
+        // label always sits in the trailing whitespace using dark ink so
+        // contrast stays readable regardless of bar colour.
+        const trackPct = Math.max(primaryPct, secondaryPct);
+        const labelInside = trackPct >= 70;
+        const valueLabel = `${r.primary.toLocaleString("en-IN")}${r.primaryLabel ? ` ${r.primaryLabel}` : ""}`;
         return (
           <li key={r.key}>
             <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
               <span className="truncate font-medium text-ink">{r.label}</span>
               <span className="flex-shrink-0 text-ink-muted">{r.caption}</span>
             </div>
-            <div className="relative h-5 overflow-hidden rounded-md bg-line-subtle">
-              {r.secondary !== undefined ? (
+            <div
+              className="relative flex h-6 w-full items-center"
+              role="img"
+              aria-label={`${r.label}: ${valueLabel}`}
+            >
+              <div className="relative h-full flex-1 overflow-hidden rounded-md bg-line-subtle">
+                {r.secondary !== undefined ? (
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-md"
+                    style={{
+                      width: `${secondaryPct}%`,
+                      background: secondaryColor,
+                      opacity: 0.55
+                    }}
+                  />
+                ) : null}
                 <div
                   className="absolute inset-y-0 left-0 rounded-md"
                   style={{
-                    width: `${secondaryPct}%`,
-                    background: secondaryColor,
-                    opacity: 0.55
+                    width: `${primaryPct}%`,
+                    background: primaryColor
                   }}
                 />
-              ) : null}
-              <div
-                className="absolute inset-y-0 left-0 rounded-md"
-                style={{ width: `${primaryPct}%`, background: primaryColor }}
-              />
-              <span className="absolute inset-y-0 right-2 flex items-center text-[10px] font-semibold text-white mix-blend-luminosity">
-                {r.primary.toLocaleString("en-IN")}
-                {r.primaryLabel ? ` ${r.primaryLabel}` : ""}
-              </span>
+                {/* Value label — dark ink, sits outside the bar by default,
+                    moves inside only when the bar is wide enough to keep
+                    contrast against violet (>=70% track). */}
+                {labelInside ? (
+                  <span
+                    className="absolute inset-y-0 right-2 flex items-center text-[11px] font-semibold text-white"
+                    style={{ textShadow: "0 1px 2px rgba(0,0,0,0.25)" }}
+                  >
+                    {valueLabel}
+                  </span>
+                ) : (
+                  <span
+                    className="absolute inset-y-0 flex items-center text-[11px] font-semibold text-ink"
+                    style={{
+                      left: `calc(${primaryPct}% + 8px)`,
+                      maxWidth: `calc(${100 - primaryPct}% - 12px)`
+                    }}
+                  >
+                    {valueLabel}
+                  </span>
+                )}
+              </div>
             </div>
           </li>
         );

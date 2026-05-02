@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { loadApplications, saveApplications } from "@/lib/storage";
+import { loadApplications, saveApplications, STORAGE_KEYS } from "@/lib/storage";
 import { reviewToStorage } from "@/lib/format";
 import type {
   Application,
@@ -58,7 +58,7 @@ export function ApplicationsProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
 
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "hp-mis:applications") {
+      if (e.key === STORAGE_KEYS.applications) {
         setApplications(loadApplications());
       }
     };
@@ -185,7 +185,7 @@ export function ApplicationsProvider({ children }: { children: ReactNode }) {
 
   const resetSeed = useCallback(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.removeItem("hp-mis:applications");
+    window.localStorage.removeItem(STORAGE_KEYS.applications);
     setApplications(loadApplications());
   }, []);
 

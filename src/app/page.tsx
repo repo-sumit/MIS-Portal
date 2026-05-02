@@ -394,7 +394,16 @@ function Dashboard() {
             }
           />
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="data-table w-full min-w-[760px]">
+            <table className="data-table w-full min-w-[820px] table-fixed">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[14%]" />
+                <col className="w-[18%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[18%]" />
+                <col className="w-[12%]" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>District</th>
@@ -423,7 +432,7 @@ function Dashboard() {
                       <td className="text-right tabular-nums">
                         {d.applications.toLocaleString("en-IN")}
                       </td>
-                      <td className="w-[140px]">
+                      <td>
                         <ProgressBar
                           value={verifiedPct}
                           tone={
@@ -441,7 +450,7 @@ function Dashboard() {
                       <td className="text-right tabular-nums text-danger-ink">
                         {d.slaBreaches}
                       </td>
-                      <td className="w-[140px]">
+                      <td>
                         <ProgressBar
                           value={fillPct}
                           tone={

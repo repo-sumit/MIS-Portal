@@ -10,7 +10,7 @@ export type ApplicationStatus =
 
 export type ReservationCategory = "general" | "obc" | "sc" | "st" | "ews";
 
-export type CourseCode = "BA" | "BSc" | "BCom" | "BCA" | "BBA";
+export type CourseCode = "BA" | "BSc" | "BCom" | "BCA" | "BBA" | "BVoc";
 
 export interface District {
   id: string;
