@@ -1,154 +1,674 @@
-# HP Higher Education MIS — Admin Portal (Prototype)
+# HP Higher Education MIS - Admin Portal
 
-Government of Himachal Pradesh · Department of Higher Education · UX4G-styled web prototype.
+The `Portal` application is the administrative interface for the Himachal Pradesh Higher Education Management Information System prototype. It models the work performed by State Admin and College Admin users after students submit admission applications in the companion `Student-App`.
 
-This is a mobile-friendly, demo-grade admin portal for the State Admin (DHE) and College Admin roles. It is a **frontend-only prototype** — no backend, no real authentication. State is persisted to browser `localStorage`.
+This README is based on the current repository contents, especially `package.json`, `src/app`, `src/components`, `src/context`, `src/lib`, and `src/data`. Where behavior is inferred from frontend-only mock logic, it is explicitly labeled as inferred.
 
----
+## Overview
 
-## Quick start
+The Portal is a Next.js frontend for reviewing student applications, managing college scrutiny, publishing merit lists, running a first-pass allocation workflow, viewing analytics, and validating college seat matrices.
 
-```bash
-cd "HP HE MIS/Portal"
-npm install
-npm run dev
+The app is currently a local prototype:
+
+- It has no backend API routes in this repository.
+- It uses deterministic mock data and browser `localStorage`.
+- Authentication is simulated with a client-side login form.
+- State Admin and College Admin authorization is enforced in the frontend.
+
+The main user flows are:
+
+1. A user signs in through `/login`.
+2. The mock session is stored in `localStorage` under `hp-mis:portal-session`.
+3. The user lands in a role-specific administrative workspace.
+4. College Admin users review applications assigned to their college and manage document scrutiny.
+5. State Admin users view statewide metrics, publish merit, run allocation, and access reporting.
+6. Application, merit, allocation, and some report data persist in browser storage for the current browser/origin.
+
+## Key Features
+
+### Mock Authentication And Role Switching
+
+- Login page at `/login`.
+- Default user ID is `director.dhe@hp.gov.in`.
+- Default role is State Admin.
+- Any non-empty password is accepted.
+- Session is stored by `SessionProvider` in `src/context/session-context.tsx`.
+- The portal frame allows switching between State Admin and College Admin roles from the header.
+- Authentication state is checked by `AuthGate`.
+- Role-specific pages are protected by `RoleGate`.
+
+Important files:
+
+- `src/app/login/page.tsx`
+- `src/context/session-context.tsx`
+- `src/components/auth/auth-gate.tsx`
+- `src/components/auth/role-gate.tsx`
+- `src/components/layout/portal-frame.tsx`
+
+### State Admin Dashboard
+
+- Main dashboard route: `/`.
+- Shows statewide admission metrics, application conversion trends, student lifecycle movement, district summaries, college performance, alerts, and operational follow-ups.
+- Dashboard data is static mock data defined in `src/data/state-dashboard-data.ts`.
+- Visualizations are implemented with custom React/SVG/CSS components rather than an external charting library.
+
+Important files:
+
+- `src/app/page.tsx`
+- `src/components/dashboard/*`
+- `src/data/state-dashboard-data.ts`
+
+### College Admin Dashboard
+
+- College dashboard route: `/college`.
+- Visible to College Admin users.
+- Uses scoped data for the active college.
+- Summarizes verification workload, scrutiny aging, accepted/rejected/discrepancy counts, category composition, district spread, and course demand.
+
+Important files:
+
+- `src/app/college/page.tsx`
+- `src/lib/scoping.ts`
+- `src/context/applications-context.tsx`
+
+### Application Review Queue
+
+- Application queue route: `/applications`.
+- Available to both State Admin and College Admin users.
+- State Admin can see all seeded applications.
+- College Admin users are scoped to the active college.
+- Supports status filters, course filters, category filters, search, reset, and CSV export.
+- Export behavior is client-side only.
+
+Important files:
+
+- `src/app/applications/page.tsx`
+- `src/components/applications/applications-table.tsx`
+- `src/lib/scoping.ts`
+
+### Application Detail And Scrutiny Workflow
+
+- Application detail route: `/applications/[applicationId]`.
+- Shows applicant details, education details, uploaded documents, preferences, and audit history.
+- Allows document-level review through a modal.
+- Supports document decisions:
+  - `verified`
+  - `concern`
+  - `rejected`
+- Notes are required for concern and rejected decisions.
+- If any document has a concern, the application is moved to `discrepancy_raised`.
+- If all documents are verified, the application is moved to `verified`.
+- If any document is rejected, the application is moved to `rejected`.
+- Every review action appends an audit history entry.
+
+Important files:
+
+- `src/app/applications/[applicationId]/page.tsx`
+- `src/components/applications/document-review-modal.tsx`
+- `src/context/applications-context.tsx`
+- `src/lib/types.ts`
+
+### Seat Matrix Validation
+
+- Seat matrix route: `/college/seats`.
+- Visible to College Admin users.
+- Shows sanctioned, submitted, filled, and available seats by course/category.
+- Highlights mismatches between sanctioned and submitted seats.
+- Inferred: this page models a college-side operational validation step before allocation, but it does not currently write changes back to a backend.
+
+Important files:
+
+- `src/app/college/seats/page.tsx`
+- `src/lib/mock-data.ts`
+- `src/lib/types.ts`
+
+### Merit Publication
+
+- Merit route: `/merit`.
+- Visible to State Admin users.
+- Generates merit overlays from verified and conditional applications.
+- Ranks candidates using deterministic frontend logic:
+  - Higher board score ranks first.
+  - Earlier date of birth breaks score ties.
+  - Category priority is considered after date of birth.
+  - Application number is the final deterministic tie-breaker.
+- Allows course-wise merit publication.
+- Merit version increments when a course is republished.
+- Published merit overlays are stored in `localStorage` under `hp-mis:merit`.
+
+Important files:
+
+- `src/app/merit/page.tsx`
+- `src/context/lifecycle-context.tsx`
+- `src/lib/lifecycle.ts`
+- `src/lib/storage.ts`
+
+### Allocation Workflow
+
+- Allocation route: `/allocation`.
+- Visible to State Admin users.
+- Requires published merit data before allocations can be generated.
+- Performs a simplified first-preference allocation flow.
+- Tracks allocated, waitlisted, and unassigned candidates.
+- Allocation overlays are stored in `localStorage` under `hp-mis:allocation`.
+
+Important files:
+
+- `src/app/allocation/page.tsx`
+- `src/context/lifecycle-context.tsx`
+- `src/lib/lifecycle.ts`
+- `src/lib/storage.ts`
+
+### Reports
+
+- Reports route: `/reports`.
+- Visible to State Admin users.
+- Shows application status distribution, category distribution, district participation, seat-fill indicators, and reporting snapshots.
+- Includes client-side export-style actions.
+- Inferred: report export is a prototype action; no server-side report generation is present.
+
+Important files:
+
+- `src/app/reports/page.tsx`
+- `src/data/state-dashboard-data.ts`
+- `src/context/applications-context.tsx`
+
+## Tech Stack
+
+| Area | Technology | Evidence |
+| --- | --- | --- |
+| Framework | Next.js `15.4.6` | `package.json`, `src/app` |
+| UI Library | React `19.1.0` | `package.json` |
+| Language | TypeScript `^5` | `tsconfig.json`, `.tsx` files |
+| Styling | Tailwind CSS `^3.4.17` | `tailwind.config.ts`, `src/app/globals.css` |
+| Icons | `lucide-react` `^0.468.0` | `package.json`, UI components |
+| Font | Noto Sans via `next/font/google` | `src/app/layout.tsx` |
+| State | React Context and hooks | `src/context/*` |
+| Persistence | Browser `localStorage` | `src/lib/storage.ts` |
+| Build Tooling | Next.js scripts | `package.json` |
+| Testing | Not found in the current repository | No test scripts or test files found |
+| Backend/API | Not found in the current repository | No `src/app/api` routes or server API layer found |
+| Database | Not found in the current repository | No schema, migration, ORM, or database client found |
+| CI/CD | Not found in the current repository | No workflow files found inside this app |
+| Docker | Not found in the current repository | No Dockerfile found inside this app |
+
+## Architecture
+
+### Application Structure
+
+```text
+Portal/
+├── package.json                  # Next.js app metadata and scripts
+├── next.config.mjs               # Next.js config
+├── postcss.config.mjs            # PostCSS/Tailwind integration
+├── tailwind.config.ts            # Tailwind theme configuration
+├── tsconfig.json                 # TypeScript configuration
+├── public/                       # Static assets
+└── src/
+    ├── app/                      # App Router pages and layout
+    │   ├── allocation/           # State Admin allocation workflow
+    │   ├── applications/         # Application queue and detail pages
+    │   ├── college/              # College Admin dashboard and seat matrix
+    │   ├── login/                # Mock login page
+    │   ├── merit/                # State Admin merit publication
+    │   ├── reports/              # Reporting dashboard
+    │   ├── globals.css           # Global styles and Tailwind layers
+    │   ├── layout.tsx            # Root HTML shell and providers
+    │   ├── not-found.tsx         # Custom 404 page
+    │   └── page.tsx              # State Admin dashboard
+    ├── components/               # Feature and shared UI components
+    │   ├── applications/         # Tables and scrutiny modal
+    │   ├── auth/                 # AuthGate and RoleGate
+    │   ├── dashboard/            # Dashboard metrics and visualizations
+    │   ├── layout/               # Portal shell
+    │   └── ui/                   # Shared UI primitives
+    ├── context/                  # React providers for session, data, lifecycle, toasts
+    ├── data/                     # Static dashboard fixtures
+    └── lib/                      # Types, mock data, lifecycle, storage, helpers
 ```
 
-Open `http://localhost:3002`.
+### Provider Tree
 
-The first visit redirects to `/login`. Use any credentials (defaults pre-filled). After signing in, you land on the State Admin command centre.
+The root layout wraps the application in the following providers:
 
-To switch between State Admin and College Admin views during a demo, click your avatar in the top-right header → choose a role.
+```tsx
+<SessionProvider>
+  <ToastProvider>
+    <ApplicationsProvider>
+      <LifecycleProvider>
+        {children}
+      </LifecycleProvider>
+    </ApplicationsProvider>
+  </ToastProvider>
+</SessionProvider>
+```
 
----
+This means:
 
-## Scripts
+- Session state is available to all pages.
+- Toast notifications can be emitted across workflows.
+- Application data is initialized before merit and allocation lifecycle logic.
+- Lifecycle state depends on application data.
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Run dev server on port 3002 |
-| `npm run build` | Production build |
-| `npm run start` | Start production server on 3002 |
-| `npm run typecheck` | TypeScript typecheck (no emit) |
-| `npm run lint` | Next.js lint |
+### Important Modules
 
----
+| Module | Purpose |
+| --- | --- |
+| `src/lib/types.ts` | Central application, college, course, document, session, merit, allocation, and reporting types |
+| `src/lib/mock-data.ts` | Deterministic seeded colleges, courses, districts, applications, seat matrix, and helper formatters |
+| `src/lib/storage.ts` | Safe wrappers for browser storage keys and overlay persistence |
+| `src/lib/lifecycle.ts` | Merit ranking and allocation generation logic |
+| `src/lib/scoping.ts` | Role-aware application filtering for State Admin and College Admin users |
+| `src/context/session-context.tsx` | Mock login/session/role-switching behavior |
+| `src/context/applications-context.tsx` | Application register state, document review, CSV export, and derived summaries |
+| `src/context/lifecycle-context.tsx` | Merit publication and allocation state |
+| `src/context/toast-context.tsx` | Toast notification state |
+| `src/components/layout/portal-frame.tsx` | Main authenticated shell, navigation, user controls, role switching |
+
+## Business Logic / Application Logic
+
+### Seed Data
+
+The app generates deterministic mock admissions data in `src/lib/mock-data.ts`:
+
+- 12 Himachal Pradesh districts.
+- 10 colleges.
+- 6 courses:
+  - `BA`
+  - `BSc`
+  - `BCom`
+  - `BCA`
+  - `BBA`
+  - `BVoc`
+- 220 seeded applications.
+- Multiple application statuses, document statuses, caste categories, genders, payment states, board scores, and preference combinations.
+
+Seeded records are used to initialize `hp-mis:applications:v2` when browser storage does not already contain application data.
+
+### Session And Permissions
+
+The app defines two roles:
+
+- `state_admin`
+- `college_admin`
+
+State Admin users can access:
+
+- `/`
+- `/applications`
+- `/applications/[applicationId]`
+- `/merit`
+- `/allocation`
+- `/reports`
+
+College Admin users can access:
+
+- `/college`
+- `/college/seats`
+- `/applications`
+- `/applications/[applicationId]`
+
+Role controls are client-side only. They are useful for prototyping workflows but are not production-grade authorization.
+
+### Application Review State
+
+Applications include a top-level status and document-level review states. The current type definitions include statuses such as:
+
+- `submitted`
+- `under_review`
+- `discrepancy_raised`
+- `verified`
+- `rejected`
+- `conditional`
+- `merit_listed`
+- `allocated`
+- `waitlisted`
+
+Document review state influences application state:
+
+- If a document is marked `concern`, the application becomes `discrepancy_raised` unless another terminal state applies.
+- If every document is verified, the application becomes `verified`.
+- If a document is rejected, the application becomes `rejected`.
+- Concern and rejection actions require a note.
+- Each review action appends a history entry.
+
+### Merit Logic
+
+Merit generation is implemented in `src/lib/lifecycle.ts`.
+
+The current candidate pool includes applications with these statuses:
+
+- `verified`
+- `conditional`
+
+Ranking is deterministic:
+
+1. Higher board score first.
+2. Earlier date of birth first.
+3. Category priority.
+4. Application number alphabetical order.
+
+Publishing merit creates or replaces a course-level merit overlay and increments the version for that course.
+
+### Allocation Logic
+
+Allocation is also implemented in `src/lib/lifecycle.ts`.
+
+The current allocation workflow:
+
+- Reads published merit for a course.
+- Allocates candidates to their first preference for that course.
+- Uses available seats from seeded college/course/category seat data.
+- Marks candidates as allocated when a seat is available.
+- Marks remaining eligible candidates as waitlisted.
+- Stores allocation overlays by course.
+
+Inferred: this is a simplified prototype of a real allocation process. It does not currently implement full preference sliding, reservation roster rotation, fee-locking, withdrawal, upgrade rounds, or server-side seat locking.
+
+### Reports Logic
+
+Reports combine seeded dashboard fixtures with derived summaries from the application register. Reports are rendered in the browser and do not currently call a reporting service.
 
 ## Routes
 
-| Route | Purpose | Visible to |
-|---|---|---|
-| `/login` | Mock authentication, government-branded login card | Public |
-| `/` | State Admin command centre — KPIs, district performance, cycle progress, alerts | Authenticated |
-| `/applications` | Applications oversight queue with search + filters | Authenticated (scoped for College Admin) |
-| `/applications/[applicationId]` | Six-tab applicant detail with scrutiny actions (verify / discrepancy / conditional / reject) | Authenticated |
-| `/college` | College Operations dashboard — KPIs, queue health, next actions | Authenticated |
-| `/college/seats` | Seat matrix with category split & download CTA | Authenticated |
-| `/reports` | Status / category / district / seat-fill reports + CSV / XLSX / weekly export CTAs | Authenticated |
+| Route | Access | Purpose | Important File |
+| --- | --- | --- | --- |
+| `/login` | Public | Mock login | `src/app/login/page.tsx` |
+| `/` | State Admin | State dashboard | `src/app/page.tsx` |
+| `/applications` | State Admin, College Admin | Application queue | `src/app/applications/page.tsx` |
+| `/applications/[applicationId]` | State Admin, College Admin | Application detail and scrutiny | `src/app/applications/[applicationId]/page.tsx` |
+| `/college` | College Admin | College dashboard | `src/app/college/page.tsx` |
+| `/college/seats` | College Admin | Seat matrix validation | `src/app/college/seats/page.tsx` |
+| `/merit` | State Admin | Merit publication | `src/app/merit/page.tsx` |
+| `/allocation` | State Admin | Allocation workflow | `src/app/allocation/page.tsx` |
+| `/reports` | State Admin | Reports and analytics | `src/app/reports/page.tsx` |
 
-`/applications/[applicationId]` is dynamic; everything else is statically rendered.
+## API Documentation
 
----
+No API routes were found in the current repository.
 
-## Tech stack
+Not found:
 
-- **Next.js 15** (App Router), **React 19**, **TypeScript**
-- **Tailwind CSS 3** with UX4G design tokens (Government violet `#613AF5`, Noto Sans, formal radius and shadows)
-- **lucide-react** icons
-- **localStorage** for persistence (`hp-mis:portal-session`, `hp-mis:applications`)
+- `src/app/api`
+- REST route handlers
+- GraphQL schema
+- API client module
+- server actions that persist to a backend
+- generated OpenAPI or Swagger documentation
 
-The visual language follows the UX4G v2.0.8 design system — Noto Sans typography, government violet primary, accessible focus rings, formal cards/tables/badges, GoI 4-column footer, tricolor identity strip and conformance to WCAG 2.1 AA.
+Inferred current behavior:
 
----
+- All workflows are local browser workflows.
+- Application data is generated from `src/lib/mock-data.ts`.
+- State changes persist only to `localStorage`.
+- CSV/report exports are simulated or generated client-side.
 
-## Mock data
+If a backend is added later, the likely API boundaries are:
 
-Seeded on first run from `src/lib/mock-data.ts`:
+- Authentication/session exchange.
+- Application register search and detail retrieval.
+- Document scrutiny updates.
+- Merit publication.
+- Seat matrix submission.
+- Allocation generation and publication.
+- Report export generation.
 
-- 12 HP districts
-- 10 government colleges (Sanjauli, RKMV, Dharamshala, Mandi, Hamirpur, Una, Solan, Kullu, Nahan, Chamba)
-- 5 UG courses (BA, BSc, BCom, BCA, BBA)
-- 32 applications with full profiles, documents, preferences and audit history
-- All six application statuses (submitted / under_scrutiny / discrepancy_raised / verified / conditional / rejected)
-- 4 policy alerts and a 7-row seat matrix
+## Data Model / Database
 
-To reset the seeded data, clear `localStorage` from your browser dev tools (DevTools → Application → Storage), or run `localStorage.removeItem('hp-mis:applications')` in the console.
+No database schema, migrations, seed scripts, ORM configuration, or database client were found in this app.
 
----
+The effective data model is TypeScript types plus browser storage.
 
-## Implementation notes
+### Main Entities
 
-**Authentication.** Login accepts any non-empty user ID + password. On submit, a 600 ms hold simulates server verification, then the session is persisted and the user is routed to `/`.
+Defined in `src/lib/types.ts`:
 
-**Scrutiny actions.** Verify, conditional accept, raise discrepancy and reject all run through a 600 ms loading hold, write the new status + a history entry to `localStorage`, push a named-entity toast (`"{Student} has been approved."`) and either redirect to the queue or update in place. No CTA is dead.
+| Entity | Purpose |
+| --- | --- |
+| `Session` | Logged-in mock user, role, college scope, and timestamps |
+| `College` | College metadata and affiliation information |
+| `Course` | Course code, name, duration, and type |
+| `Application` | Applicant profile, academics, preferences, documents, status, and history |
+| `DocumentEntry` | Uploaded document metadata, review status, reviewer, and notes |
+| `HistoryEntry` | Audit-style timeline event |
+| `MeritOverlay` | Published merit state for a course |
+| `AllocationOverlay` | Allocation state for a course |
+| `SeatMatrix` | Course/category seat capacity for colleges |
+| `ReportSnapshot` | Report export metadata shape |
 
-**Role switching.** The top-right user menu lets you toggle State Admin ⇄ College Admin during a demo without signing out. State Admin sees the statewide application queue; College Admin sees only the configured college's queue (`gc-sanjauli`).
+### Browser Storage
 
-**Responsive.** Below 768 px the sidebar collapses into a drawer, the applications table renders as a card list, KPI strips stack into 2-up grids, filters become a single-column form. All interactive elements meet 44 pt minimum tap target.
+Defined in `src/lib/storage.ts`:
 
-**Accessibility.** Native `<button>` / `<a>` / `<input>` / `<table>` semantics throughout, visible focus rings, `aria-busy` on loading buttons, `aria-current` on active sidebar links, `role="status"` toasts, `prefers-reduced-motion` respected.
+| Key | Purpose | Notes |
+| --- | --- | --- |
+| `hp-mis:portal-session` | Portal session | Written by `SessionProvider` |
+| `hp-mis:applications:v2` | Portal application register | Initialized from seeded mock data |
+| `hp-mis:merit` | Published merit overlays | Written by lifecycle provider |
+| `hp-mis:allocation` | Allocation overlays | Written by lifecycle provider |
+| `hp-mis:reports` | Report snapshots | Key exists; active usage was not found |
 
----
+Important integration constraint:
 
-## Assumptions
+- The companion `Student-App` also references some `hp-mis:*` storage keys.
+- In the current code, `Student-App` stores submitted applications under `hp-mis:applications`, while Portal stores its seeded register under `hp-mis:applications:v2`.
+- Both apps reference `hp-mis:allocation`, but their expected data shapes differ. If the two apps are served from the same origin, this key can become an integration conflict.
 
-1. **Frontend-only.** No backend service. Persistence is per-browser via `localStorage`.
-2. **State Admin is the default sign-in.** College Admin is reachable via the demo role switcher rather than a distinct credentials path — simpler for demos.
-3. **Reduced scope vs. the full report.** The `Docs/PORTAL_APP_REPORT.md` reference describes 13 routes; this prototype intentionally ships 7 polished routes (login, dashboard, applications, application detail, college operations, seat matrix, reports). Merit publication, allocation runs, cycle setup, policy alerts feed and lifecycle metrics are out of scope for the prototype.
-4. **No real exports.** Download CSV / XLSX / Weekly report and Download seat matrix simulate generation with a 700 ms hold and a toast — they do not actually produce a file.
-5. **UX4G colours and tokens are reproduced** in `tailwind.config.ts` rather than imported from the published UX4G CSS bundle. This avoids a runtime fetch and keeps the prototype self-contained.
+## Environment Variables
 
----
+No environment variable usage was found in this app.
 
-## File map
+| Variable | Purpose | Required | Default | Used In |
+| --- | --- | --- | --- | --- |
+| Not found in the current repository | N/A | N/A | N/A | N/A |
 
+Checked locations:
+
+- `.env.example`
+- `.env.local.example`
+- `package.json`
+- `next.config.mjs`
+- `src/**/*`
+- Docker and CI/CD files
+
+No Docker or CI/CD files were found in this app.
+
+## Installation
+
+### Prerequisites
+
+- Node.js compatible with Next.js 15.
+- npm.
+
+The repository does not define an `.nvmrc`, `engines` field, Volta config, pnpm workspace, or yarn workspace for this app.
+
+### Setup
+
+```bash
+cd Portal
+npm install
 ```
-Portal/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx                  Root layout (font, providers)
-│   │   ├── globals.css                 UX4G tokens, reset, focus rings
-│   │   ├── page.tsx                    State Admin command centre  /
-│   │   ├── login/page.tsx              /login
-│   │   ├── applications/
-│   │   │   ├── page.tsx                /applications
-│   │   │   └── [applicationId]/page.tsx /applications/[id]
-│   │   ├── college/
-│   │   │   ├── page.tsx                /college
-│   │   │   └── seats/page.tsx          /college/seats
-│   │   ├── reports/page.tsx            /reports
-│   │   └── not-found.tsx               404
-│   ├── components/
-│   │   ├── shell/portal-frame.tsx      Header + sidebar + footer
-│   │   ├── shell/auth-gate.tsx         Redirects to /login if unauthenticated
-│   │   └── ui/                         Button, Card, Badge, Input, Stat,
-│   │                                    Alert, EmptyState, ProgressBar
-│   ├── lib/
-│   │   ├── types.ts                    Domain types
-│   │   ├── mock-data.ts                Seed districts, colleges, applications
-│   │   ├── storage.ts                  localStorage helpers + keys
-│   │   └── format.ts                   Status / category / date formatters
-│   └── providers/
-│       ├── session-provider.tsx        Mock auth + role switching
-│       ├── toast-provider.tsx          Toast queue
-│       └── applications-provider.tsx   Applications state + setStatus()
-├── tailwind.config.ts
-├── next.config.mjs
-├── tsconfig.json
-├── postcss.config.mjs
-└── package.json
+
+No environment file is required for the current prototype.
+
+### Local Development
+
+```bash
+npm run dev
 ```
 
----
+The dev server is configured to run on port `3002`.
 
-## Remaining gaps / Phase 2 candidates
+Open:
 
-- Real authentication (SSO, OTP, Aadhaar bridge)
-- Backend service for the application register
-- Merit publication (`/merit`) and allocation (`/allocation`) workflow pages
-- Cycle setup authoring (`/state/cycle`)
-- Policy alerts feed (`/state/alerts`) as a dedicated page
-- Student lifecycle dashboard (`/state/lifecycle`)
-- File generation for CSV / XLSX exports
-- Cross-tab live sync with the Student-App via `storage` events
-- Multi-language toggle for English / Hindi (Devanagari)
+```text
+http://localhost:3002
+```
+
+PowerShell note:
+
+```powershell
+npm.cmd run dev
+```
+
+## Running The Project
+
+| Command | Purpose | Notes |
+| --- | --- | --- |
+| `npm run dev` | Start local development server | Runs `next dev --port 3002` |
+| `npm run build` | Create production build | Verified during README update |
+| `npm run start` | Start production server | Runs `next start` |
+| `npm run lint` | Run Next lint command | Prompts for ESLint setup because no ESLint config is present |
+| `npm run typecheck` | Run TypeScript without emitting files | Verified during README update |
+
+No migration, seed, worker, queue, format, or deployment scripts were found.
+
+## Testing
+
+Automated tests are not configured in the current repository.
+
+Not found:
+
+- test scripts in `package.json`
+- Jest/Vitest/Playwright/Cypress configuration
+- `*.test.*` or `*.spec.*` files
+- coverage configuration
+
+Recommended smoke-test paths for manual QA:
+
+1. Visit `/login`, enter any non-empty password, and sign in.
+2. Confirm State Admin dashboard loads at `/`.
+3. Open `/applications`, filter/search records, and export CSV.
+4. Open an application detail page and review a document.
+5. Publish merit from `/merit`.
+6. Run allocation from `/allocation`.
+7. Switch to College Admin and verify `/college` and `/college/seats`.
+
+## Deployment
+
+No deployment configuration was found in this app.
+
+Not found:
+
+- Dockerfile
+- Docker Compose
+- GitHub Actions
+- Vercel configuration
+- Netlify configuration
+- Kubernetes manifests
+- cloud deployment scripts
+
+Generic Next.js deployment flow:
+
+```bash
+npm install
+npm run build
+npm run start
+```
+
+Deployment constraints:
+
+- This app currently depends on browser `localStorage`; data will not be shared across users, devices, browsers, or origins.
+- The mock login is not secure for production.
+- There is no backend persistence, server-side authorization, or audit log service.
+- If deployed with the companion `Student-App`, storage keys and expected data shapes should be reconciled before using a shared origin.
+
+## Security / Permissions
+
+Current security behavior:
+
+- Authentication is simulated.
+- Any non-empty password is accepted.
+- Role checks are implemented client-side.
+- College scoping is implemented client-side.
+- Application actions are local browser state changes.
+- Document scrutiny notes are validated in the UI for concern/rejection decisions.
+
+Not found:
+
+- server-side authentication
+- password hashing
+- session cookies
+- JWT handling
+- CSRF protection
+- API authorization middleware
+- rate limiting
+- server-side input validation
+- encrypted persistence
+- production audit log service
+
+Production readiness note:
+
+The current Portal should be treated as a frontend prototype. Real deployment would require backend identity, durable persistence, server-side authorization, tamper-resistant audit logging, and API-level validation.
+
+## Error Handling & Logging
+
+Current error and feedback behavior:
+
+- Toast notifications are available through `ToastProvider`.
+- Role-restricted pages render guarded fallback states.
+- Unknown routes render a custom 404 page.
+- Storage helpers guard against unavailable browser storage and malformed persisted JSON.
+- Application review actions validate required notes for concern/rejection decisions.
+- Empty states are shown for filtered tables and missing records.
+
+Not found:
+
+- remote logging
+- structured server logs
+- monitoring or tracing
+- retry queues
+- error reporting integrations
+- centralized exception boundary
+
+## Known Constraints
+
+- The Portal is frontend-only in the current repository.
+- Authentication and authorization are mock client-side behaviors.
+- Data persistence is limited to browser storage.
+- Seeded applications are generated inside `src/lib/mock-data.ts`, not loaded from a backend.
+- Portal application data is not automatically synchronized with `Student-App` submissions.
+- `Student-App` and Portal use different application storage keys.
+- `Student-App` and Portal both reference `hp-mis:allocation` but with different expected shapes.
+- CSV/report export flows are client-side prototype actions.
+- Seat matrix validation highlights mismatches but does not submit them to a backend.
+- Allocation is simplified and does not implement full admissions counseling rules.
+- ESLint is not configured even though `npm run lint` exists.
+- No automated tests are configured.
+- No deployment pipeline is configured.
+
+## Future Improvements
+
+- Add real authentication through a server-backed identity provider.
+- Replace mock `localStorage` persistence with API-backed data access.
+- Align storage/data contracts between Portal and `Student-App`.
+- Add durable audit logging for scrutiny, merit, allocation, and role changes.
+- Implement server-side role and college-scope authorization.
+- Expand allocation logic to support multi-preference rounds, reservation rules, upgrades, withdrawals, and fee confirmation.
+- Add API documentation once backend endpoints exist.
+- Add unit tests for `src/lib/lifecycle.ts`, `src/lib/scoping.ts`, and storage helpers.
+- Add integration or E2E tests for login, scrutiny, merit, allocation, and seat validation flows.
+- Configure ESLint explicitly so `npm run lint` runs non-interactively.
+- Add environment-specific deployment documentation.
+
+## Contribution Guidelines
+
+No dedicated contribution guide was found in this app.
+
+Suggested workflow:
+
+1. Create a focused branch for each change.
+2. Run `npm run typecheck` before opening a PR.
+3. Run `npm run build` before changes that affect routing, layout, or provider behavior.
+4. Keep mock data changes deterministic.
+5. Update this README when routes, workflows, commands, storage keys, or data contracts change.
+6. Avoid committing generated build artifacts unless the team intentionally tracks them.
+
+When adding production integrations, document:
+
+- new environment variables
+- backend endpoints
+- authentication assumptions
+- deployment steps
+- migration or seed commands
+- security implications
